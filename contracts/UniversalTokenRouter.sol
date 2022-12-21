@@ -11,7 +11,10 @@ import "./interfaces/IUniversalTokenRouter.sol";
 contract UniversalTokenRouter is IUniversalTokenRouter {
     function exec(
         Action[] calldata actions
-    ) override external payable returns (uint[] memory results) {
+    ) override external payable returns (
+        uint[] memory results,
+        uint gasLeft
+    ) {
         results = new uint[](actions.length);
         uint value; // track the ETH value to pass to next output action transaction value
         for (uint i = 0; i < actions.length; ++i) {
@@ -53,6 +56,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 results[i] = change;
             }
         }
+        gasLeft = gasleft();
     }
 
     function _transfer(Action memory action) internal returns (uint amount) {

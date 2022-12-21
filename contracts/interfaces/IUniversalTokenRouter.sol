@@ -13,5 +13,10 @@ struct Action {
 }
 
 interface IUniversalTokenRouter {
-    function exec(Action[] calldata actions) external payable returns (uint[] memory results);
+    function exec(
+        Action[] calldata actions
+    ) external payable returns (
+        uint[] memory results,
+        uint gasLeft
+    );
 }
