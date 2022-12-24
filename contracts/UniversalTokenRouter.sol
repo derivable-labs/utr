@@ -14,7 +14,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     ) override external payable returns (
         uint[][] memory results,
         uint gasLeft
-    ) {
+    ) { unchecked {
         results = new uint[][](actions.length);
         uint value; // track the ETH value to pass to next output action transaction value
         bytes memory inputParams;
@@ -84,23 +84,25 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     continue;
                 }
                 uint balance = _balanceOf(token);
-                uint change = balance - results[i][j];
-                require(change >= token.amount, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+                uint change = balance - results[i][j]; // overflow checked with `change <= balance` bellow
+                require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
                 results[i][j] = change;
             }
         }
         gasLeft = gasleft();
-    }
+    } }
 
     // https://ethereum.stackexchange.com/a/54405
     function _sliceUint(bytes memory bs, uint start) internal pure returns (uint x) {
+    unchecked {
         // require(bs.length >= start + 32, "slicing out of range");
         assembly {
             x := mload(add(bs, start))
         }
-    }
+    } }
 
     function _transfer(Token memory token) internal {
+    unchecked {
         if (token.amount == 0) {
             return;   // nothing to transfer
         } else if (token.eip == 20) {
@@ -114,9 +116,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
-    }
+    } }
 
     function _balanceOf(Token memory token) internal view returns (uint balance) {
+    unchecked {
         if (token.eip == 20) {
             return IERC20(token.adr).balanceOf(token.recipient);
         }
@@ -130,5 +133,5 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             return token.recipient.balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
-    }
+    } }
 }
