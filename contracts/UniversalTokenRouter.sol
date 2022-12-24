@@ -30,7 +30,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         results[i][j] = _balanceOf(token);
                     }
                 }
-                if (action.target != address(0x0)) {
+                if (action.input.length > 0) {
                     bool success;
                     (success, result) = action.target.call{value: value}(action.input);
                     if (!success) {
@@ -43,7 +43,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 continue;
             }
             // input action
-            if (action.target != address(0x0)) {
+            if (action.input.length > 0) {
                 bool success;
                 (success, result) = action.target.call(action.input);
                 if (!success) {
@@ -55,7 +55,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             for (uint j = 0; j < action.tokens.length; ++j) {
                 Token memory token = action.tokens[j];
                 // input action
-                if (action.target != address(0x0)) {
+                if (action.input.length > 0) {
                     // TODO: handle negative inputOffset
                     uint amount = _sliceUint(result, uint(action.inputOffset) + j*32);
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
