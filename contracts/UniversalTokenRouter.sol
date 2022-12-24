@@ -17,10 +17,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     ) {
         results = new uint[][](actions.length);
         uint value; // track the ETH value to pass to next output action transaction value
+        bytes memory inputParams;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             results[i] = new uint[](action.tokens.length);
-            bytes memory result;
             if (action.inputOffset == 0) {
                 // output action
                 for (uint j = 0; j < action.tokens.length; ++j) {
@@ -31,8 +31,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                 }
                 if (action.input.length > 0) {
-                    bool success;
-                    (success, result) = action.target.call{value: value}(action.input);
+                    (bool success, bytes memory result) = action.target.call{value: value}(action.input);
                     if (!success) {
                         assembly {
                             revert(add(result,32),mload(result))
@@ -45,10 +44,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             // input action
             if (action.input.length > 0) {
                 bool success;
-                (success, result) = action.target.call(action.input);
+                (success, inputParams) = action.target.call(action.input);
                 if (!success) {
                     assembly {
-                        revert(add(result,32),mload(result))
+                        revert(add(inputParams,32),mload(inputParams))
                     }
                 }
             }
@@ -57,7 +56,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 // input action
                 if (action.input.length > 0) {
                     // TODO: handle negative inputOffset
-                    uint amount = _sliceUint(result, uint(action.inputOffset) + j*32);
+                    uint amount = _sliceUint(inputParams, uint(action.inputOffset) + j*32);
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     token.amount = amount;
                 }
