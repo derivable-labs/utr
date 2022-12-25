@@ -21,7 +21,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             results[i] = new uint[](action.tokens.length);
-            if (action.inputOffset == 0) {
+            if (action.inputOffset < 32) {
                 // output action
                 for (uint j = 0; j < action.tokens.length; ++j) {
                     Token memory token = action.tokens[j];
@@ -31,8 +31,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                 }
                 if (action.data.length > 0) {
+                    // TODO: INPUT_PARAMS_PLACEHOLDER
                     (bool success, bytes memory result) = action.code.call{value: value}(action.data);
-                    if (!success) {
+                    // ignore output action error if the first bit of inputOffset is not set
+                    if (!success && (action.inputOffset & 0x1) == 0) {
                         assembly {
                             revert(add(result,32),mload(result))
                         }
@@ -65,7 +67,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     value = token.amount;
                     continue; // ETH not transfered here will be passed to the next output call value
                 }
-                _transfer(token);
+                if (token.amount > 0) {
+                    _transfer(token);
+                }
             }
         }
         // refund any left-over ETH
@@ -75,7 +79,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
         // verify the balance change
         for (uint i = 0; i < actions.length; ++i) {
-            if (actions[i].inputOffset != 0) {
+            if (actions[i].inputOffset >= 32) {
                 continue;
             }
             for (uint j = 0; j < actions[i].tokens.length; ++j) {
@@ -103,9 +107,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
 
     function _transfer(Token memory token) internal {
     unchecked {
-        if (token.amount == 0) {
-            return;   // nothing to transfer
-        } else if (token.eip == 20) {
+        if (token.eip == 20) {
             TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
         } else if (token.eip == 1155) {
             IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
