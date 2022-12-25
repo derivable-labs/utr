@@ -30,8 +30,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         results[i][j] = _balanceOf(token);
                     }
                 }
-                if (action.input.length > 0) {
-                    (bool success, bytes memory result) = action.target.call{value: value}(action.input);
+                if (action.data.length > 0) {
+                    (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                     if (!success) {
                         assembly {
                             revert(add(result,32),mload(result))
@@ -42,9 +42,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 continue;
             }
             // input action
-            if (action.input.length > 0) {
+            if (action.data.length > 0) {
                 bool success;
-                (success, inputParams) = action.target.call(action.input);
+                (success, inputParams) = action.code.call(action.data);
                 if (!success) {
                     assembly {
                         revert(add(inputParams,32),mload(inputParams))
@@ -54,7 +54,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             for (uint j = 0; j < action.tokens.length; ++j) {
                 Token memory token = action.tokens[j];
                 // input action
-                if (action.input.length > 0) {
+                if (action.data.length > 0) {
                     // TODO: handle negative inputOffset
                     uint amount = _sliceUint(inputParams, uint(action.inputOffset) + j*32);
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");

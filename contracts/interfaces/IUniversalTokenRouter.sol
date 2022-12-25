@@ -11,8 +11,8 @@ struct Token {
 
 struct Action {
     int inputOffset;  // 0 for output action, != 0 for input return data offset
-    address target;               // contract code address
-    bytes input;                 // contract data
+    address code;               // contract code address
+    bytes data;                 // contract input data
     Token[] tokens;
 }
 
