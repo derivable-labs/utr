@@ -9,6 +9,8 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
+    uint constant INPUT_PARAMS_PLACEHOLDER = uint(keccak256('UniversalTokenRouter.INPUT_PARAMS_PLACEHOLDER'));
+
     function exec(
         Action[] calldata actions
     ) override external payable returns (
@@ -31,7 +33,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                 }
                 if (action.data.length > 0) {
-                    // TODO: INPUT_PARAMS_PLACEHOLDER
+                    uint length = action.data.length;
+                    if (length >= 4+32*3 &&
+                        _sliceUint(action.data, length) == INPUT_PARAMS_PLACEHOLDER &&
+                        _sliceUint(action.data, length-32) == 32)
+                    {
+                        action.data = _concat(action.data, length-32, inputParams);
+                    }
                     (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                     // ignore output action error if the first bit of inputOffset is not set
                     if (!success && (action.inputOffset & 0x1) == 0) {
@@ -99,6 +107,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     // https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
     function _concat(
         bytes memory preBytes,
+        uint length,
         bytes memory postBytes
     )
         internal
@@ -112,7 +121,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
 
             // Store the length of the first bytes array at the beginning of
             // the memory for bothBytes.
-            let length := mload(preBytes)
             mstore(bothBytes, length)
 
             // Maintain a memory counter for the current write location in the
@@ -145,13 +153,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
 
             // Move the memory counter back from a multiple of 0x20 to the
             // actual end of the preBytes data.
-            mc := end
+            mc := sub(end, 0x20)
             // Stop copying when the memory counter reaches the new combined
             // length of the arrays.
-            end := add(mc, length)
+            end := add(end, length)
 
             for {
-                let cc := add(postBytes, 0x20)
+                let cc := postBytes
             } lt(mc, end) {
                 mc := add(mc, 0x20)
                 cc := add(cc, 0x20)
@@ -169,9 +177,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
               not(31) // Round down to the nearest 32 bytes.
             ))
         }
-    }
-
-    function _prepareActionData(bytes memory data, bytes memory inputParams) internal pure returns (bytes memory) {
     }
 
     // https://ethereum.stackexchange.com/a/54405
