@@ -9,6 +9,8 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
+    uint constant INPUT_PARAMS_PLACEHOLDER = uint(keccak256('UniversalTokenRouter.INPUT_PARAMS_PLACEHOLDER'));
+
     function exec(
         Action[] calldata actions
     ) override external payable returns (
@@ -31,7 +33,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                 }
                 if (action.data.length > 0) {
-                    // TODO: INPUT_PARAMS_PLACEHOLDER
+                    uint length = action.data.length;
+                    if (length >= 4+32*3 &&
+                        _sliceUint(action.data, length) == INPUT_PARAMS_PLACEHOLDER &&
+                        _sliceUint(action.data, length-32) == 32)
+                    {
+                        action.data = _concat(action.data, length-32, inputParams);
+                    }
                     (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                     // ignore output action error if the first bit of inputOffset is not set
                     if (!success && (action.inputOffset & 0x1) == 0) {
@@ -95,6 +103,81 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
         gasLeft = gasleft();
     } }
+
+    // https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
+    function _concat(
+        bytes memory preBytes,
+        uint length,
+        bytes memory postBytes
+    )
+        internal
+        pure
+        returns (bytes memory bothBytes)
+    {
+        assembly {
+            // Get a location of some free memory and store it in bothBytes as
+            // Solidity does for memory variables.
+            bothBytes := mload(0x40)
+
+            // Store the length of the first bytes array at the beginning of
+            // the memory for bothBytes.
+            mstore(bothBytes, length)
+
+            // Maintain a memory counter for the current write location in the
+            // temp bytes array by adding the 32 bytes for the array length to
+            // the starting location.
+            let mc := add(bothBytes, 0x20)
+            // Stop copying when the memory counter reaches the length of the
+            // first bytes array.
+            let end := add(mc, length)
+
+            for {
+                // Initialize a copy counter to the start of the preBytes data,
+                // 32 bytes into its memory.
+                let cc := add(preBytes, 0x20)
+            } lt(mc, end) {
+                // Increase both counters by 32 bytes each iteration.
+                mc := add(mc, 0x20)
+                cc := add(cc, 0x20)
+            } {
+                // Write the preBytes data into the bothBytes memory 32 bytes
+                // at a time.
+                mstore(mc, mload(cc))
+            }
+
+            // Add the length of postBytes to the current length of bothBytes
+            // and store it as the new length in the first 32 bytes of the
+            // bothBytes memory.
+            length := mload(postBytes)
+            mstore(bothBytes, add(length, mload(bothBytes)))
+
+            // Move the memory counter back from a multiple of 0x20 to the
+            // actual end of the preBytes data.
+            mc := sub(end, 0x20)
+            // Stop copying when the memory counter reaches the new combined
+            // length of the arrays.
+            end := add(end, length)
+
+            for {
+                let cc := postBytes
+            } lt(mc, end) {
+                mc := add(mc, 0x20)
+                cc := add(cc, 0x20)
+            } {
+                mstore(mc, mload(cc))
+            }
+
+            // Update the free-memory pointer by padding our last write location
+            // to 32 bytes: add 31 bytes to the end of bothBytes to move to the
+            // next 32 byte block, then round down to the nearest multiple of
+            // 32. If the sum of the length of the two arrays is zero then add
+            // one before rounding down to leave a blank 32 bytes (the length block with 0).
+            mstore(0x40, and(
+              add(add(end, iszero(add(length, mload(preBytes)))), 31),
+              not(31) // Round down to the nearest 32 bytes.
+            ))
+        }
+    }
 
     // https://ethereum.stackexchange.com/a/54405
     function _sliceUint(bytes memory bs, uint start) internal pure returns (uint x) {
