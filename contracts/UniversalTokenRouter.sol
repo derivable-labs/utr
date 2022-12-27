@@ -10,6 +10,7 @@ import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant INPUT_PARAMS_PLACEHOLDER = uint(keccak256('UniversalTokenRouter.INPUT_PARAMS_PLACEHOLDER'));
+    uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
 
     function exec(
         Action[] calldata actions
@@ -213,6 +214,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             return IERC1155(token.adr).balanceOf(token.recipient, token.id);
         }
         if (token.eip == 721) {
+            if (token.id == EIP_721_ALL) {
+                return IERC721(token.adr).balanceOf(token.recipient);
+            }
             return IERC721(token.adr).ownerOf(token.id) == token.recipient ? 1 : 0;
         }
         if (token.eip == 0) {
