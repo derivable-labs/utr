@@ -9,7 +9,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant INPUT_PARAMS_PLACEHOLDER = uint(keccak256('UniversalTokenRouter.INPUT_PARAMS_PLACEHOLDER'));
+    uint constant AMOUNT_INS_PLACEHOLDER = uint(keccak256('UniversalTokenRouter.AMOUNT_INS_PLACEHOLDER'));
     uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
 
     function exec(
@@ -19,10 +19,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         uint[][] memory amounts = new uint[][](actions.length);
         // results = new bytes[](actions.length);
         uint value; // track the ETH value to pass to next output action transaction value
-        bytes memory inputParams;
+        bytes memory amountIns;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
-            if (action.inputOffset < 32) {
+            if (action.output > 0) {
                 // output action
                 amounts[i] = new uint[](action.tokens.length);
                 for (uint j = 0; j < action.tokens.length; ++j) {
@@ -35,14 +35,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 if (action.data.length > 0) {
                     uint length = action.data.length;
                     if (length >= 4+32*3 &&
-                        _sliceUint(action.data, length) == INPUT_PARAMS_PLACEHOLDER &&
+                        _sliceUint(action.data, length) == AMOUNT_INS_PLACEHOLDER &&
                         _sliceUint(action.data, length-32) == 32)
                     {
-                        action.data = _concat(action.data, length-32, inputParams);
+                        action.data = _concat(action.data, length-32, amountIns);
                     }
                     (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                     // ignore output action error if the first bit of inputOffset is not set
-                    if (!success && (action.inputOffset & 0x1) == 0) {
+                    if (!success && action.output == 1) {
                         assembly {
                             revert(add(result,32),mload(result))
                         }
@@ -56,19 +56,19 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             // amounts[i] = new uint[](action.tokens.length);
             if (action.data.length > 0) {
                 bool success;
-                (success, inputParams) = action.code.call(action.data);
+                (success, amountIns) = action.code.call(action.data);
                 if (!success) {
                     assembly {
-                        revert(add(inputParams,32),mload(inputParams))
+                        revert(add(amountIns,32),mload(amountIns))
                     }
                 }
                 // results[i] = inputParams;
             }
             for (uint j = 0; j < action.tokens.length; ++j) {
                 Token memory token = action.tokens[j];
-                // input action
-                if (action.data.length > 0) {
-                    uint amount = _sliceUint(inputParams, action.inputOffset + j*32);
+                if (token.offset >= 32) {
+                    // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
+                    uint amount = _sliceUint(amountIns, token.offset);
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     token.amount = amount;
                 }
@@ -89,7 +89,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
         // verify the balance change
         for (uint i = 0; i < actions.length; ++i) {
-            if (actions[i].inputOffset >= 32) {
+            if (actions[i].output == 0) {
                 continue;
             }
             for (uint j = 0; j < actions[i].tokens.length; ++j) {
