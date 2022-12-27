@@ -65,8 +65,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 Token memory token = action.tokens[j];
                 // input action
                 if (action.data.length > 0) {
-                    // TODO: handle negative inputOffset
-                    uint amount = _sliceUint(inputParams, uint(action.inputOffset) + j*32);
+                    uint amount = _sliceUint(inputParams, action.inputOffset + j*32);
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     token.amount = amount;
                 }
