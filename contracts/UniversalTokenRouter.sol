@@ -13,22 +13,17 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
 
     function exec(
         Action[] calldata actions
-    ) override external payable
-    returns (
-        uint[][] memory amounts,
-        bytes[] memory results,
-        uint gasLeft
-    )
-    { unchecked {
-        amounts = new uint[][](actions.length);
-        results = new bytes[](actions.length);
+    ) override external payable {
+    unchecked {
+        uint[][] memory amounts = new uint[][](actions.length);
+        // results = new bytes[](actions.length);
         uint value; // track the ETH value to pass to next output action transaction value
         bytes memory inputParams;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
-            amounts[i] = new uint[](action.tokens.length);
             if (action.inputOffset < 32) {
                 // output action
+                amounts[i] = new uint[](action.tokens.length);
                 for (uint j = 0; j < action.tokens.length; ++j) {
                     Token memory token = action.tokens[j];
                     if (token.amount > 0) {
@@ -51,12 +46,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                             revert(add(result,32),mload(result))
                         }
                     }
-                    results[i] = result;
+                    // results[i] = result;
                     delete value; // clear the ETH value after transfer
                 }
                 continue;
             }
             // input action
+            // amounts[i] = new uint[](action.tokens.length);
             if (action.data.length > 0) {
                 bool success;
                 (success, inputParams) = action.code.call(action.data);
@@ -65,7 +61,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         revert(add(inputParams,32),mload(inputParams))
                     }
                 }
-                results[i] = inputParams;
+                // results[i] = inputParams;
             }
             for (uint j = 0; j < action.tokens.length; ++j) {
                 Token memory token = action.tokens[j];
@@ -75,7 +71,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     token.amount = amount;
                 }
-                amounts[i][j] = token.amount;
+                // amounts[i][j] = token.amount;
                 if (token.eip == 0 && token.recipient == address(0x0)) {
                     value = token.amount;
                     continue; // ETH not transfered here will be passed to the next output call value
@@ -106,7 +102,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 amounts[i][j] = change;
             }
         }
-        gasLeft = gasleft();
+        // gasLeft = gasleft();
     } }
 
     // https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
