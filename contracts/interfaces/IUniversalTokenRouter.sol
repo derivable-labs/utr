@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 struct Token {
-    uint eip;       // token type: 0 for ETH, # for ERC#
+    uint eip;       // token standard: 0 for ETH or EIP number
     address adr;    // token contract address
     uint id;        // token id for EIP721 and EIP1155
     uint amount;    // amountInMax for input action, amountOutMin for output action

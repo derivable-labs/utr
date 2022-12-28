@@ -41,8 +41,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         action.data = _concat(action.data, length-32, amountIns);
                     }
                     (bool success, bytes memory result) = action.code.call{value: value}(action.data);
-                    // ignore output action error if the first bit of inputOffset is not set
-                    if (!success && action.output == 1) {
+                    // ignore output action error if output == 2
+                    if (!success && action.output == 2) {
                         assembly {
                             revert(add(result,32),mload(result))
                         }
@@ -104,6 +104,50 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             }
         }
         // gasLeft = gasleft();
+    } }
+
+    function _transfer(Token memory token) internal {
+    unchecked {
+        if (token.eip == 20) {
+            TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
+        } else if (token.eip == 1155) {
+            IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
+        } else if (token.eip == 721) {
+            IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
+        } else if (token.eip == 0) {
+            TransferHelper.safeTransferETH(token.recipient, token.amount);
+        } else {
+            revert("UniversalTokenRouter: INVALID_EIP");
+        }
+    } }
+
+    function _balanceOf(Token memory token) internal view returns (uint balance) {
+    unchecked {
+        if (token.eip == 20) {
+            return IERC20(token.adr).balanceOf(token.recipient);
+        }
+        if (token.eip == 1155) {
+            return IERC1155(token.adr).balanceOf(token.recipient, token.id);
+        }
+        if (token.eip == 721) {
+            if (token.id == EIP_721_ALL) {
+                return IERC721(token.adr).balanceOf(token.recipient);
+            }
+            return IERC721(token.adr).ownerOf(token.id) == token.recipient ? 1 : 0;
+        }
+        if (token.eip == 0) {
+            return token.recipient.balance;
+        }
+        revert("UniversalTokenRouter: INVALID_EIP");
+    } }
+
+    // https://ethereum.stackexchange.com/a/54405
+    function _sliceUint(bytes memory bs, uint start) internal pure returns (uint x) {
+    unchecked {
+        // require(bs.length >= start + 32, "slicing out of range");
+        assembly {
+            x := mload(add(bs, start))
+        }
     } }
 
     // https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
@@ -180,48 +224,4 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             ))
         }
     }
-
-    // https://ethereum.stackexchange.com/a/54405
-    function _sliceUint(bytes memory bs, uint start) internal pure returns (uint x) {
-    unchecked {
-        // require(bs.length >= start + 32, "slicing out of range");
-        assembly {
-            x := mload(add(bs, start))
-        }
-    } }
-
-    function _transfer(Token memory token) internal {
-    unchecked {
-        if (token.eip == 20) {
-            TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
-        } else if (token.eip == 1155) {
-            IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
-        } else if (token.eip == 721) {
-            IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
-        } else if (token.eip == 0) {
-            TransferHelper.safeTransferETH(token.recipient, token.amount);
-        } else {
-            revert("UniversalTokenRouter: INVALID_EIP");
-        }
-    } }
-
-    function _balanceOf(Token memory token) internal view returns (uint balance) {
-    unchecked {
-        if (token.eip == 20) {
-            return IERC20(token.adr).balanceOf(token.recipient);
-        }
-        if (token.eip == 1155) {
-            return IERC1155(token.adr).balanceOf(token.recipient, token.id);
-        }
-        if (token.eip == 721) {
-            if (token.id == EIP_721_ALL) {
-                return IERC721(token.adr).balanceOf(token.recipient);
-            }
-            return IERC721(token.adr).ownerOf(token.id) == token.recipient ? 1 : 0;
-        }
-        if (token.eip == 0) {
-            return token.recipient.balance;
-        }
-        revert("UniversalTokenRouter: INVALID_EIP");
-    } }
 }
