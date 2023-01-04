@@ -26,8 +26,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 // output action
                 amounts[i] = new uint[](action.tokens.length);
                 for (uint j = 0; j < action.tokens.length; ++j) {
+                    Token memory token = actions[i].tokens[j];
                     // track the recipient balance before the action is executed
-                    amounts[i][j] = _balanceOf(action.tokens[j]);
+                    amounts[i][j] = _balanceOf(token, token.recipient);
                 }
                 if (action.data.length > 0) {
                     uint length = action.data.length;
@@ -75,7 +76,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     continue; // ETH not transfered here will be passed to the next output call value
                 }
                 if (token.amount > 0) {
-                    _transfer(token);
+                    _transferFrom(token, msg.sender);
                 }
             }
         }
@@ -91,7 +92,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             }
             for (uint j = 0; j < actions[i].tokens.length; ++j) {
                 Token memory token = actions[i].tokens[j];
-                uint balance = _balanceOf(token);
+                uint balance = _balanceOf(token, token.recipient);
                 uint change = balance - amounts[i][j]; // overflow checked with `change <= balance` bellow
                 require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
                 amounts[i][j] = change;
@@ -100,14 +101,18 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         // gasLeft = gasleft();
     } }
 
-    function _transfer(Token memory token) internal {
+    function _transferFrom(Token memory token, address from) internal {
     unchecked {
         if (token.eip == 20) {
-            TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
+            if (from == address(this)) {
+                TransferHelper.safeTransfer(token.adr, token.recipient, token.amount);
+            } else {
+                TransferHelper.safeTransferFrom(token.adr, from, token.recipient, token.amount);
+            }
         } else if (token.eip == 1155) {
-            IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
+            IERC1155(token.adr).safeTransferFrom(from, token.recipient, token.id, token.amount, "");
         } else if (token.eip == 721) {
-            IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
+            IERC721(token.adr).safeTransferFrom(from, token.recipient, token.id);
         } else if (token.eip == 0) {
             TransferHelper.safeTransferETH(token.recipient, token.amount);
         } else {
@@ -115,22 +120,22 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
-    function _balanceOf(Token memory token) internal view returns (uint balance) {
+    function _balanceOf(Token memory token, address owner) internal view returns (uint balance) {
     unchecked {
         if (token.eip == 20) {
-            return IERC20(token.adr).balanceOf(token.recipient);
+            return IERC20(token.adr).balanceOf(owner);
         }
         if (token.eip == 1155) {
-            return IERC1155(token.adr).balanceOf(token.recipient, token.id);
+            return IERC1155(token.adr).balanceOf(owner, token.id);
         }
         if (token.eip == 721) {
             if (token.id == EIP_721_ALL) {
-                return IERC721(token.adr).balanceOf(token.recipient);
+                return IERC721(token.adr).balanceOf(owner);
             }
-            return IERC721(token.adr).ownerOf(token.id) == token.recipient ? 1 : 0;
+            return IERC721(token.adr).ownerOf(token.id) == owner ? 1 : 0;
         }
         if (token.eip == 0) {
-            return token.recipient.balance;
+            return owner.balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
     } }
