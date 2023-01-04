@@ -26,11 +26,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 // output action
                 amounts[i] = new uint[](action.tokens.length);
                 for (uint j = 0; j < action.tokens.length; ++j) {
-                    Token memory token = action.tokens[j];
-                    if (token.amount > 0) {
-                        // track the recipient balance before the action is executed
-                        amounts[i][j] = _balanceOf(token);
-                    }
+                    // track the recipient balance before the action is executed
+                    amounts[i][j] = _balanceOf(action.tokens[j]);
                 }
                 if (action.data.length > 0) {
                     uint length = action.data.length;
@@ -94,9 +91,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             }
             for (uint j = 0; j < actions[i].tokens.length; ++j) {
                 Token memory token = actions[i].tokens[j];
-                if (token.amount == 0) {
-                    continue;
-                }
                 uint balance = _balanceOf(token);
                 uint change = balance - amounts[i][j]; // overflow checked with `change <= balance` bellow
                 require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
