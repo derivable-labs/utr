@@ -9,7 +9,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant AMOUNT_INS_PLACEHOLDER = uint(keccak256('UniversalTokenRouter.AMOUNT_INS_PLACEHOLDER'));
+    uint constant LAST_INPUT_RESULT = uint(keccak256('UniversalTokenRouter.LAST_INPUT_RESULT'));
     uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
 
     function exec(
@@ -31,7 +31,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
 
         uint value; // track the ETH value to pass to next output action transaction value
-        bytes memory amountIns;
+        bytes memory lastInputResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             if (action.output > 0) {
@@ -39,10 +39,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 if (action.data.length > 0) {
                     uint length = action.data.length;
                     if (length >= 4+32*3 &&
-                        _sliceUint(action.data, length) == AMOUNT_INS_PLACEHOLDER &&
+                        _sliceUint(action.data, length) == LAST_INPUT_RESULT &&
                         _sliceUint(action.data, length-32) == 32)
                     {
-                        action.data = _concat(action.data, length-32, amountIns);
+                        action.data = _concat(action.data, length-32, lastInputResult);
                     }
                     (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                     // ignore output action error if output == 2
@@ -58,7 +58,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     if (token.amount == 0) {
                         // transfer action
                         if (token.offset >= 32) {
-                            token.amount = _sliceUint(amountIns, token.offset);
+                            token.amount = _sliceUint(lastInputResult, token.offset);
                         } else {
                             token.amount = _balanceOf(token, address(this));
                         }
@@ -75,10 +75,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             // input action
             if (action.data.length > 0) {
                 bool success;
-                (success, amountIns) = action.code.call(action.data);
+                (success, lastInputResult) = action.code.call(action.data);
                 if (!success) {
                     assembly {
-                        revert(add(amountIns,32),mload(amountIns))
+                        revert(add(lastInputResult,32),mload(lastInputResult))
                     }
                 }
             }
@@ -86,7 +86,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 Token memory token = action.tokens[j];
                 if (token.offset >= 32) {
                     // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
-                    uint amount = _sliceUint(amountIns, token.offset);
+                    uint amount = _sliceUint(lastInputResult, token.offset);
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     token.amount = amount;
                 }
@@ -99,6 +99,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 }
             }
         }
+
         // refund any left-over ETH
         uint leftOver = address(this).balance;
         if (leftOver > 0) {
