@@ -24,7 +24,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             }
             balances[i] = new uint[](actions[i].tokens.length);
             for (uint j = 0; j < balances[i].length; ++j) {
-                if (actions[i].tokens[j].amount > 0) {
+                if (actions[i].tokens[j].offset == 0) {
                     balances[i][j] = _balanceOf(actions[i].tokens[j], actions[i].tokens[j].recipient);
                 }
             }
@@ -81,11 +81,11 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 }
                 for (uint j = 0; j < action.tokens.length; ++j) {
                     Token memory token = actions[i].tokens[j];
-                    if (token.amount == 0) {
+                    if (token.offset > 0) {
                         // token transfer sub-action
                         if (token.offset >= 32) {
                             token.amount = _sliceUint(lastInputResult, token.offset);
-                        } else {
+                        } else if (token.amount == 0) {
                             token.amount = _balanceOf(token, address(this));
                         }
                         _transferFrom(token, address(this));
