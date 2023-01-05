@@ -17,15 +17,15 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     ) override external payable {
     unchecked {
         // track the balances before any action is executed
-        uint[][] memory amounts = new uint[][](actions.length);
+        uint[][] memory balances = new uint[][](actions.length);
         for (uint i = 0; i < actions.length; ++i) {
             if (actions[i].output == 0 || actions[i].tokens.length == 0) {
                 continue;
             }
-            amounts[i] = new uint[](actions[i].tokens.length);
-            for (uint j = 0; j < amounts[i].length; ++j) {
+            balances[i] = new uint[](actions[i].tokens.length);
+            for (uint j = 0; j < balances[i].length; ++j) {
                 if (actions[i].tokens[j].amount > 0) {
-                    amounts[i][j] = _balanceOf(actions[i].tokens[j], actions[i].tokens[j].recipient);
+                    balances[i][j] = _balanceOf(actions[i].tokens[j], actions[i].tokens[j].recipient);
                 }
             }
         }
@@ -67,7 +67,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                     // verify the balance change
                     uint balance = _balanceOf(token, token.recipient);
-                    uint change = balance - amounts[i][j]; // overflow checked with `change <= balance` bellow
+                    uint change = balance - balances[i][j]; // overflow checked with `change <= balance` bellow
                     require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
                 }
                 continue;
