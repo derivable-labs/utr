@@ -153,7 +153,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         revert("UniversalTokenRouter: INVALID_EIP");
     } }
 
-    // https://ethereum.stackexchange.com/a/54405
     function _sliceUint(bytes memory bs, uint start) internal pure returns (uint x) {
     unchecked {
         // require(bs.length >= start + 32, "slicing out of range");
@@ -162,16 +161,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
-    // https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
+    /// https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
+    /// @param length length of the first preBytes
     function _concat(
         bytes memory preBytes,
         uint length,
         bytes memory postBytes
-    )
-        internal
-        pure
-        returns (bytes memory bothBytes)
-    {
+    ) internal pure returns (bytes memory bothBytes) {
         assembly {
             // Get a location of some free memory and store it in bothBytes as
             // Solidity does for memory variables.
