@@ -34,7 +34,33 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         bytes memory lastInputResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
-            if (action.output > 0) {
+            if (action.output == 0) {
+                // input action
+                if (action.data.length > 0) {
+                    bool success;
+                    (success, lastInputResult) = action.code.call(action.data);
+                    if (!success) {
+                        assembly {
+                            revert(add(lastInputResult,32),mload(lastInputResult))
+                        }
+                    }
+                }
+                for (uint j = 0; j < action.tokens.length; ++j) {
+                    Token memory token = action.tokens[j];
+                    if (token.offset >= 32) {
+                        // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
+                        uint amount = _sliceUint(lastInputResult, token.offset);
+                        require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
+                        token.amount = amount;
+                    }
+                    if (token.eip == 0 && token.recipient == address(0x0)) {
+                        value = token.amount;
+                        // ETH not transfered here will be passed to the next output call value
+                    } else if (token.amount > 0) {
+                        _transferFrom(token, msg.sender);
+                    }
+                }
+            } else {
                 // output action
                 if (action.data.length > 0) {
                     uint length = action.data.length;
@@ -56,46 +82,19 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 for (uint j = 0; j < action.tokens.length; ++j) {
                     Token memory token = actions[i].tokens[j];
                     if (token.amount == 0) {
-                        // transfer action
+                        // token transfer sub-action
                         if (token.offset >= 32) {
                             token.amount = _sliceUint(lastInputResult, token.offset);
                         } else {
                             token.amount = _balanceOf(token, address(this));
                         }
                         _transferFrom(token, address(this));
-                        continue;
+                    } else {
+                        // verify the balance change
+                        uint balance = _balanceOf(token, token.recipient);
+                        uint change = balance - balances[i][j]; // overflow checked with `change <= balance` bellow
+                        require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
                     }
-                    // verify the balance change
-                    uint balance = _balanceOf(token, token.recipient);
-                    uint change = balance - balances[i][j]; // overflow checked with `change <= balance` bellow
-                    require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
-                }
-                continue;
-            }
-            // input action
-            if (action.data.length > 0) {
-                bool success;
-                (success, lastInputResult) = action.code.call(action.data);
-                if (!success) {
-                    assembly {
-                        revert(add(lastInputResult,32),mload(lastInputResult))
-                    }
-                }
-            }
-            for (uint j = 0; j < action.tokens.length; ++j) {
-                Token memory token = action.tokens[j];
-                if (token.offset >= 32) {
-                    // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
-                    uint amount = _sliceUint(lastInputResult, token.offset);
-                    require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
-                    token.amount = amount;
-                }
-                if (token.eip == 0 && token.recipient == address(0x0)) {
-                    value = token.amount;
-                    continue; // ETH not transfered here will be passed to the next output call value
-                }
-                if (token.amount > 0) {
-                    _transferFrom(token, msg.sender);
                 }
             }
         }
