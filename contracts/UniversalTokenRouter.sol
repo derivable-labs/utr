@@ -16,30 +16,26 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         Action[] calldata actions
     ) override external payable {
     unchecked {
+        // track the balances before any action is executed
         uint[][] memory amounts = new uint[][](actions.length);
-        // results = new bytes[](actions.length);
+        for (uint i = 0; i < actions.length; ++i) {
+            if (actions[i].output == 0 || actions[i].tokens.length == 0) {
+                continue;
+            }
+            amounts[i] = new uint[](actions[i].tokens.length);
+            for (uint j = 0; j < amounts[i].length; ++j) {
+                if (actions[i].tokens[j].amount > 0) {
+                    amounts[i][j] = _balanceOf(actions[i].tokens[j], actions[i].tokens[j].recipient);
+                }
+            }
+        }
+
         uint value; // track the ETH value to pass to next output action transaction value
         bytes memory amountIns;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             if (action.output > 0) {
                 // output action
-                amounts[i] = new uint[](action.tokens.length);
-                for (uint j = 0; j < action.tokens.length; ++j) {
-                    Token memory token = actions[i].tokens[j];
-                    if (token.amount == 0) {
-                        // transfer action
-                        if (token.offset >= 32) {
-                            token.amount = _sliceUint(amountIns, token.offset);
-                        } else {
-                            token.amount = _balanceOf(token, address(this));
-                        }
-                        _transferFrom(token, address(this));
-                        continue;
-                    }
-                    // track the recipient balance before the action is executed
-                    amounts[i][j] = _balanceOf(token, token.recipient);
-                }
                 if (action.data.length > 0) {
                     uint length = action.data.length;
                     if (length >= 4+32*3 &&
@@ -55,13 +51,28 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                             revert(add(result,32),mload(result))
                         }
                     }
-                    // results[i] = result;
                     delete value; // clear the ETH value after transfer
+                }
+                for (uint j = 0; j < action.tokens.length; ++j) {
+                    Token memory token = actions[i].tokens[j];
+                    if (token.amount == 0) {
+                        // transfer action
+                        if (token.offset >= 32) {
+                            token.amount = _sliceUint(amountIns, token.offset);
+                        } else {
+                            token.amount = _balanceOf(token, address(this));
+                        }
+                        _transferFrom(token, address(this));
+                        continue;
+                    }
+                    // verify the balance change
+                    uint balance = _balanceOf(token, token.recipient);
+                    uint change = balance - amounts[i][j]; // overflow checked with `change <= balance` bellow
+                    require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
                 }
                 continue;
             }
             // input action
-            // amounts[i] = new uint[](action.tokens.length);
             if (action.data.length > 0) {
                 bool success;
                 (success, amountIns) = action.code.call(action.data);
@@ -70,7 +81,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         revert(add(amountIns,32),mload(amountIns))
                     }
                 }
-                // results[i] = inputParams;
             }
             for (uint j = 0; j < action.tokens.length; ++j) {
                 Token memory token = action.tokens[j];
@@ -80,7 +90,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     token.amount = amount;
                 }
-                // amounts[i][j] = token.amount;
                 if (token.eip == 0 && token.recipient == address(0x0)) {
                     value = token.amount;
                     continue; // ETH not transfered here will be passed to the next output call value
@@ -95,23 +104,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         if (leftOver > 0) {
             TransferHelper.safeTransferETH(msg.sender, leftOver);
         }
-        // verify the balance change
-        for (uint i = 0; i < actions.length; ++i) {
-            if (actions[i].output == 0) {
-                continue;
-            }
-            for (uint j = 0; j < actions[i].tokens.length; ++j) {
-                Token memory token = actions[i].tokens[j];
-                if (token.amount == 0) {
-                    continue;
-                }
-                uint balance = _balanceOf(token, token.recipient);
-                uint change = balance - amounts[i][j]; // overflow checked with `change <= balance` bellow
-                require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
-                amounts[i][j] = change;
-            }
-        }
-        // gasLeft = gasleft();
     } }
 
     function _transferFrom(Token memory token, address from) internal {
