@@ -6,7 +6,8 @@ struct Token {
     address adr;    // token contract address
     uint id;        // token id for EIP721 and EIP1155
     uint amount;    // amountInMax for input action, amountOutMin for output action
-    uint offset;    // byte offset to get the amountIn from the last input code result
+    uint offset;    // with input actions: byte offset to get the amountIn from the lastInputResult bytes
+                    // with output actions: 0 for token balance change verification, or output token transfer
     address recipient;
 }
 
