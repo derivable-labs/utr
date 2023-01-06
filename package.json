@@ -1,5 +1,6 @@
 {
-  "name": "utr-contracts",
+  "name": "@derivable/utr",
+  "description": "Universal Token Router for Derivable",
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
