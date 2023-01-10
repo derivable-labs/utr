@@ -184,6 +184,78 @@ scenarios.forEach(function (scenario) {
                     }
                 ]);
             });
+            it("Deposit WETH and transfer them out", async function () {
+                const { universalRouter, weth, otherAccount } = await loadFixture(scenario.fixture);
+                const someRecipient = otherAccount.address;
+                // sample code to deposit WETH and transfer them out
+                await universalRouter.exec([
+                    {
+                        output: 0,
+                        code: AddressZero,
+                        data: '0x',
+                        tokens: [{
+                            eip: 0,                 // ETH
+                            adr: AddressZero,
+                            id: 0,
+                            offset: 0,              // use the exact amount specified bellow
+                            amount: 123,
+                            recipient: AddressZero, // pass it as the value for the next output action
+                        }],
+                    },
+                    {
+                        output: 1,
+                        code: weth.address,
+                        data: (await weth.populateTransaction.deposit()).data,    // WETH.deposit returns WETH token to the UTR contract
+                        tokens: [{
+                            offset: 1,  // token transfer sub-action
+                            eip: 20,
+                            adr: weth.address,
+                            id: 0,
+                            amount: 0,  // entire WETH balance of this UTR contract
+                            recipient: someRecipient,
+                        }],
+                    },
+                    // ... continue to use WETH in SomeRecipient
+                ], {value: 123});
+                expect(await weth.balanceOf(someRecipient)).to.equal(123);
+            });
+            it("Adapter contract for WETH", async function () {
+                const { universalRouter, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
+                await weth.approve(universalRouter.address, MaxUint256);
+                await weth.approve(wethAdapter.address, MaxUint256);
+                const someRecipient = otherAccount.address;
+                await universalRouter.exec([
+                    {
+                        output: 0,
+                        code: AddressZero,
+                        data: '0x',
+                        tokens: [{
+                            eip: 0,                 // ETH
+                            adr: AddressZero,
+                            id: 0,
+                            offset: 0,              // use the exact amount specified bellow
+                            amount: 123,
+                            recipient: AddressZero, // pass it as the value for the next output action
+                        }],
+                    },
+                    {
+                        output: 1,
+                        code: wethAdapter.address,
+                        data: (await wethAdapter.populateTransaction.deposit(someRecipient)).data,    // WETH.deposit returns WETH token to the UTR contract
+                        tokens: [
+                            {
+                                offset: 0,  // token transfer sub-action
+                                eip: 20,
+                                adr: weth.address,
+                                id: 0,
+                                amount: 123,  // entire WETH balance of this UTR contract
+                                recipient: someRecipient,
+                            }
+                        ],
+                    },
+                    // ... continue to use WETH in SomeRecipient
+                ], {value: 123});
+            });
         });
     });
 });

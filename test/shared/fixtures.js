@@ -56,11 +56,19 @@ async function scenario01() {
     );
     await uniswapV2Helper01.deployed();
 
+    // deploy WethAdapter
+    const WethAdapter = await ethers.getContractFactory("WethAdapter");
+    const wethAdapter = await WethAdapter.deploy(
+        weth.address
+    );
+    await wethAdapter.deployed();
+
     return {
         uniswapRouter,
         universalRouter,
         uniswapPool,
         uniswapV2Helper01,
+        wethAdapter,
         busd,
         weth,
         owner,
