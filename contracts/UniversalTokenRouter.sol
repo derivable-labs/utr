@@ -19,13 +19,16 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         // track the balances before any action is executed
         uint[][] memory balances = new uint[][](actions.length);
         for (uint i = 0; i < actions.length; ++i) {
-            if (actions[i].output == 0 || actions[i].tokens.length == 0) {
+            Action memory action = actions[i];
+            Token[] memory tokens = action.tokens;
+            if (action.output == 0 || tokens.length == 0) {
                 continue;
             }
-            balances[i] = new uint[](actions[i].tokens.length);
+            balances[i] = new uint[](tokens.length);
             for (uint j = 0; j < balances[i].length; ++j) {
-                if (actions[i].tokens[j].offset == 0) {
-                    balances[i][j] = _balanceOf(actions[i].tokens[j]);
+                Token memory token = tokens[j];
+                if (token.offset == 0) {
+                    balances[i][j] = _balanceOf(token);
                 }
             }
         }
@@ -34,6 +37,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         bytes memory lastInputResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
+            Token[] memory tokens = action.tokens;
             if (action.output == 0) {
                 // input action
                 if (action.data.length > 0) {
@@ -45,8 +49,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         }
                     }
                 }
-                for (uint j = 0; j < action.tokens.length; ++j) {
-                    Token memory token = action.tokens[j];
+                for (uint j = 0; j < tokens.length; ++j) {
+                    Token memory token = tokens[j];
                     if (token.offset >= 32) {
                         // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
                         uint amount = _sliceUint(lastInputResult, token.offset);
@@ -79,8 +83,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                     delete value; // clear the ETH value after transfer
                 }
-                for (uint j = 0; j < action.tokens.length; ++j) {
-                    Token memory token = actions[i].tokens[j];
+                for (uint j = 0; j < tokens.length; ++j) {
+                    Token memory token = tokens[j];
                     if (token.offset > 0) {
                         // token transfer sub-action
                         if (token.offset >= 32) {
