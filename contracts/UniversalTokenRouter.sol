@@ -24,13 +24,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             if (action.output == 0 || tokens.length == 0) {
                 continue;
             }
-            balances[i] = new uint[](tokens.length);
-            for (uint j = 0; j < balances[i].length; ++j) {
+            uint[] memory bls = new uint[](tokens.length);
+            for (uint j = 0; j < bls.length; ++j) {
                 Token memory token = tokens[j];
                 if (token.offset == 0) {
-                    balances[i][j] = _balanceOf(token);
+                    bls[j] = _balanceOf(token);
                 }
             }
+            balances[i] = bls;
         }
 
         uint value; // track the ETH value to pass to next output action transaction value
