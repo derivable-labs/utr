@@ -13,7 +13,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
 
     function exec(
-        Action[] calldata actions
+        Action[] memory actions
     ) override external payable {
     unchecked {
         // track the balances before any action is executed
