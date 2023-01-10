@@ -25,7 +25,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             balances[i] = new uint[](actions[i].tokens.length);
             for (uint j = 0; j < balances[i].length; ++j) {
                 if (actions[i].tokens[j].offset == 0) {
-                    balances[i][j] = _balanceOf(actions[i].tokens[j], actions[i].tokens[j].recipient);
+                    balances[i][j] = _balanceOf(actions[i].tokens[j]);
                 }
             }
         }
@@ -57,7 +57,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         value = token.amount;
                         // ETH not transfered here will be passed to the next output call value
                     } else if (token.amount > 0) {
-                        _transferFrom(token, msg.sender);
+                        _transferFrom(token);
                     }
                 }
             } else {
@@ -86,12 +86,12 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         if (token.offset >= 32) {
                             token.amount = _sliceUint(lastInputResult, token.offset);
                         } else if (token.amount == 0) {
-                            token.amount = _balanceOf(token, address(this));
+                            token.amount = _balance(token);
                         }
-                        _transferFrom(token, address(this));
+                        _transfer(token);
                     } else {
                         // verify the balance change
-                        uint balance = _balanceOf(token, token.recipient);
+                        uint balance = _balanceOf(token);
                         uint change = balance - balances[i][j]; // overflow checked with `change <= balance` bellow
                         require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
                     }
@@ -106,18 +106,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
-    function _transferFrom(Token memory token, address from) internal {
+    function _transferFrom(Token memory token) internal {
     unchecked {
         if (token.eip == 20) {
-            if (from == address(this)) {
-                TransferHelper.safeTransfer(token.adr, token.recipient, token.amount);
-            } else {
-                TransferHelper.safeTransferFrom(token.adr, from, token.recipient, token.amount);
-            }
+            TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
         } else if (token.eip == 1155) {
-            IERC1155(token.adr).safeTransferFrom(from, token.recipient, token.id, token.amount, "");
+            IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
         } else if (token.eip == 721) {
-            IERC721(token.adr).safeTransferFrom(from, token.recipient, token.id);
+            IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
         } else if (token.eip == 0) {
             TransferHelper.safeTransferETH(token.recipient, token.amount);
         } else {
@@ -125,26 +121,67 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
-    function _balanceOf(Token memory token, address owner) internal view returns (uint balance) {
+    // intentionally duplicate code to minimize gas usage
+    function _transfer(Token memory token) internal {
     unchecked {
         if (token.eip == 20) {
-            return IERC20(token.adr).balanceOf(owner);
+            TransferHelper.safeTransfer(token.adr, token.recipient, token.amount);
+        } else if (token.eip == 1155) {
+            IERC1155(token.adr).safeTransferFrom(address(this), token.recipient, token.id, token.amount, "");
+        } else if (token.eip == 721) {
+            IERC721(token.adr).safeTransferFrom(address(this), token.recipient, token.id);
+        } else if (token.eip == 0) {
+            TransferHelper.safeTransferETH(token.recipient, token.amount);
+        } else {
+            revert("UniversalTokenRouter: INVALID_EIP");
+        }
+    } }
+
+    function _balanceOf(Token memory token) internal view returns (uint balance) {
+    unchecked {
+        if (token.eip == 20) {
+            return IERC20(token.adr).balanceOf(token.recipient);
         }
         if (token.eip == 1155) {
-            return IERC1155(token.adr).balanceOf(owner, token.id);
+            return IERC1155(token.adr).balanceOf(token.recipient, token.id);
         }
         if (token.eip == 721) {
             if (token.id == EIP_721_ALL) {
-                return IERC721(token.adr).balanceOf(owner);
+                return IERC721(token.adr).balanceOf(token.recipient);
             }
             try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
-                return currentOwner == owner ? 1 : 0;
+                return currentOwner == token.recipient ? 1 : 0;
             } catch {
                 return 0;
             }
         }
         if (token.eip == 0) {
-            return owner.balance;
+            return token.recipient.balance;
+        }
+        revert("UniversalTokenRouter: INVALID_EIP");
+    } }
+
+    // intentionally duplicate code to minimize gas usage
+    function _balance(Token memory token) internal view returns (uint balance) {
+    unchecked {
+        if (token.eip == 20) {
+            return IERC20(token.adr).balanceOf(address(this));
+        }
+        if (token.eip == 1155) {
+            return IERC1155(token.adr).balanceOf(address(this), token.id);
+        }
+        if (token.eip == 721) {
+            if (token.id == EIP_721_ALL) {
+                return IERC721(token.adr).balanceOf(address(this));
+            }
+            try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
+                return currentOwner == address(this) ? 1 : 0;
+            } catch {
+                return 0;
+            }
+        }
+        if (token.eip == 0) {
+            return address(this).balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
     } }
