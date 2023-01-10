@@ -2,6 +2,7 @@
 const dotenv = require("dotenv");
 dotenv.config({ path: __dirname + "/.env" });
 
+require("@nomiclabs/hardhat-ethers");
 require("hardhat-contract-sizer");
 
 module.exports = {
@@ -14,6 +15,15 @@ module.exports = {
                     optimizer: {
                         enabled: true,
                         runs: 4294967295,
+                    },
+                },
+            },
+            {
+                version: "0.6.6",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 1000,
                     },
                 },
             }
