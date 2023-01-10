@@ -244,11 +244,11 @@ scenarios.forEach(function (scenario) {
                         data: (await wethAdapter.populateTransaction.deposit(someRecipient)).data,    // WETH.deposit returns WETH token to the UTR contract
                         tokens: [
                             {
-                                offset: 0,  // token transfer sub-action
+                                offset: 0,  // token balance verification
                                 eip: 20,
                                 adr: weth.address,
                                 id: 0,
-                                amount: 123,  // entire WETH balance of this UTR contract
+                                amount: 123,
                                 recipient: someRecipient,
                             }
                         ],
