@@ -112,7 +112,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     } }
 
     function _transferFrom(Token memory token) internal {
-    unchecked {
         if (token.eip == 20) {
             TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
         } else if (token.eip == 1155) {
@@ -124,11 +123,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
-    } }
+    }
 
     // intentionally duplicate code to minimize gas usage
     function _transfer(Token memory token) internal {
-    unchecked {
         if (token.eip == 20) {
             TransferHelper.safeTransfer(token.adr, token.recipient, token.amount);
         } else if (token.eip == 1155) {
@@ -140,10 +138,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
-    } }
+    }
 
     function _balanceOf(Token memory token) internal view returns (uint balance) {
-    unchecked {
         if (token.eip == 20) {
             return IERC20(token.adr).balanceOf(token.recipient);
         }
@@ -164,11 +161,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             return token.recipient.balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
-    } }
+    }
 
     // intentionally duplicate code to minimize gas usage
     function _balance(Token memory token) internal view returns (uint balance) {
-    unchecked {
         if (token.eip == 20) {
             return IERC20(token.adr).balanceOf(address(this));
         }
@@ -189,15 +185,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             return address(this).balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
-    } }
+    }
 
     function _sliceUint(bytes memory bs, uint start) internal pure returns (uint x) {
-    unchecked {
         // require(bs.length >= start + 32, "slicing out of range");
         assembly {
             x := mload(add(bs, start))
         }
-    } }
+    }
 
     /// https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
     /// @param length length of the first preBytes
