@@ -259,10 +259,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             // next 32 byte block, then round down to the nearest multiple of
             // 32. If the sum of the length of the two arrays is zero then add
             // one before rounding down to leave a blank 32 bytes (the length block with 0).
-            mstore(0x40, and(
-              add(add(end, iszero(add(length, mload(preBytes)))), 31),
-              not(31) // Round down to the nearest 32 bytes.
-            ))
+            // mstore(0x40, and(
+            //   add(add(end, iszero(add(length, mload(preBytes)))), 31),
+            //   not(31) // Round down to the nearest 32 bytes.
+            // ))
         }
     }
 }
