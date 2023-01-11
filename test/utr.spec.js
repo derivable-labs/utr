@@ -97,15 +97,7 @@ scenarios.forEach(function (scenario) {
                                 eip: 20,
                                 adr: path[0],
                                 id: 0,
-                                offset: 64, // first item of getAmountIns result array
-                                amount: amountInMax,
-                                recipient: to,
-                            },
-                            {
-                                eip: 20,
-                                adr: path[0],
-                                id: 0,
-                                offset: 0, // first item of getAmountIns result array
+                                offset: 32*3, // first item of getAmountIns result array
                                 amount: amountInMax,
                                 recipient: uniswapPool.address,
                             },
