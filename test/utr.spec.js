@@ -18,7 +18,8 @@ const scenarios = [
     { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
-const LAST_INPUT_RESULT = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.LAST_INPUT_RESULT"))
+const LAST_INPUT_RESULT = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.LAST_INPUT_RESULT"));
+const EIP_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.EIP_721_ALL"))
 
 scenarios.forEach(function (scenario) {
     describe("Pool Info: " + scenario.fixtureName, function () {
@@ -247,6 +248,47 @@ scenarios.forEach(function (scenario) {
                     },
                     // ... continue to use WETH in SomeRecipient
                 ], {value: 123});
+            });
+            it("Output Token Verification - EIP_721_ALL", async function () {
+                const { universalRouter, gameItem, owner } = await loadFixture(scenario.fixture);
+                await gameItem.setApprovalForAll(universalRouter.address, true);
+                const tokenURI = "https://game.example/item.json";
+                const player = owner.address;
+                const amount = 3;
+                await universalRouter.exec([
+                    {
+                        output: 1,
+                        code: gameItem.address,
+                        data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                        tokens: [
+                            {
+                                offset: 0,  // token balance verification
+                                eip: 721,
+                                adr: gameItem.address,
+                                id: 0,
+                                amount: 1,
+                                recipient: player,
+                            }
+                        ],
+                    },
+                ]);
+                await universalRouter.exec([
+                    {
+                        output: 1,
+                        code: gameItem.address,
+                        data: (await gameItem.populateTransaction.awardItems(amount, player, tokenURI)).data,
+                        tokens: [
+                            {
+                                offset: 0,  // token balance verification
+                                eip: 721,
+                                adr: gameItem.address,
+                                id: EIP_721_ALL,
+                                amount: 3,
+                                recipient: player,
+                            }
+                        ],
+                    },
+                ]);
             });
         });
     });
