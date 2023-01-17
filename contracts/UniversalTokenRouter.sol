@@ -137,8 +137,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             if (token.id == EIP_721_ALL) {
                 return IERC721(token.adr).balanceOf(owner);
             }
-            try IERC721(token.adr).ownerOf(token.id) {
-                return IERC721(token.adr).ownerOf(token.id) == owner ? 1 : 0;
+            try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
+                return currentOwner == owner ? 1 : 0;
             } catch {
                 return 0;
             }
