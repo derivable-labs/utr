@@ -11,7 +11,6 @@ import "./interfaces/IUniversalTokenRouter.sol";
 contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant LAST_INPUT_RESULT = uint(keccak256('UniversalTokenRouter.LAST_INPUT_RESULT'));
     uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
-    uint constant ERC721_INVALID_TOKEN_ID = uint(keccak256('ERC721: invalid token ID'));
 
     function exec(
         Action[] calldata actions
@@ -140,9 +139,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             }
             try IERC721(token.adr).ownerOf(token.id) {
                 return IERC721(token.adr).ownerOf(token.id) == owner ? 1 : 0;
-            } catch Error(string memory reason) {
-                if (uint(keccak256(abi.encodePacked(reason))) == ERC721_INVALID_TOKEN_ID)
-                    return 0;
+            } catch {
+                return 0;
             }
         }
         if (token.eip == 0) {
