@@ -13,27 +13,32 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
 
     function exec(
-        Action[] calldata actions
+        Action[] memory actions
     ) override external payable {
     unchecked {
         // track the balances before any action is executed
         uint[][] memory balances = new uint[][](actions.length);
         for (uint i = 0; i < actions.length; ++i) {
-            if (actions[i].output == 0 || actions[i].tokens.length == 0) {
+            Action memory action = actions[i];
+            Token[] memory tokens = action.tokens;
+            if (action.output == 0 || tokens.length == 0) {
                 continue;
             }
-            balances[i] = new uint[](actions[i].tokens.length);
-            for (uint j = 0; j < balances[i].length; ++j) {
-                if (actions[i].tokens[j].offset == 0) {
-                    balances[i][j] = _balanceOf(actions[i].tokens[j], actions[i].tokens[j].recipient);
+            uint[] memory bls = new uint[](tokens.length);
+            for (uint j = 0; j < bls.length; ++j) {
+                Token memory token = tokens[j];
+                if (token.offset == 0) {
+                    bls[j] = _balanceOf(token);
                 }
             }
+            balances[i] = bls;
         }
 
         uint value; // track the ETH value to pass to next output action transaction value
         bytes memory lastInputResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
+            Token[] memory tokens = action.tokens;
             if (action.output == 0) {
                 // input action
                 if (action.data.length > 0) {
@@ -45,8 +50,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         }
                     }
                 }
-                for (uint j = 0; j < action.tokens.length; ++j) {
-                    Token memory token = action.tokens[j];
+                for (uint j = 0; j < tokens.length; ++j) {
+                    Token memory token = tokens[j];
                     if (token.offset >= 32) {
                         // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
                         uint amount = _sliceUint(lastInputResult, token.offset);
@@ -57,7 +62,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         value = token.amount;
                         // ETH not transfered here will be passed to the next output call value
                     } else if (token.amount > 0) {
-                        _transferFrom(token, msg.sender);
+                        _transferFrom(token);
                     }
                 }
             } else {
@@ -79,19 +84,19 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                     delete value; // clear the ETH value after transfer
                 }
-                for (uint j = 0; j < action.tokens.length; ++j) {
-                    Token memory token = actions[i].tokens[j];
+                for (uint j = 0; j < tokens.length; ++j) {
+                    Token memory token = tokens[j];
                     if (token.offset > 0) {
                         // token transfer sub-action
                         if (token.offset >= 32) {
                             token.amount = _sliceUint(lastInputResult, token.offset);
                         } else if (token.amount == 0) {
-                            token.amount = _balanceOf(token, address(this));
+                            token.amount = _balance(token);
                         }
-                        _transferFrom(token, address(this));
+                        _transfer(token);
                     } else {
                         // verify the balance change
-                        uint balance = _balanceOf(token, token.recipient);
+                        uint balance = _balanceOf(token);
                         uint change = balance - balances[i][j]; // overflow checked with `change <= balance` bellow
                         require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
                     }
@@ -106,56 +111,88 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
-    function _transferFrom(Token memory token, address from) internal {
-    unchecked {
+    function _transferFrom(Token memory token) internal {
         if (token.eip == 20) {
-            if (from == address(this)) {
-                TransferHelper.safeTransfer(token.adr, token.recipient, token.amount);
-            } else {
-                TransferHelper.safeTransferFrom(token.adr, from, token.recipient, token.amount);
-            }
+            TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
         } else if (token.eip == 1155) {
-            IERC1155(token.adr).safeTransferFrom(from, token.recipient, token.id, token.amount, "");
+            IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
         } else if (token.eip == 721) {
-            IERC721(token.adr).safeTransferFrom(from, token.recipient, token.id);
+            IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
         } else if (token.eip == 0) {
             TransferHelper.safeTransferETH(token.recipient, token.amount);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
-    } }
+    }
 
-    function _balanceOf(Token memory token, address owner) internal view returns (uint balance) {
-    unchecked {
+    // intentionally duplicate code to minimize gas usage
+    function _transfer(Token memory token) internal {
         if (token.eip == 20) {
-            return IERC20(token.adr).balanceOf(owner);
+            TransferHelper.safeTransfer(token.adr, token.recipient, token.amount);
+        } else if (token.eip == 1155) {
+            IERC1155(token.adr).safeTransferFrom(address(this), token.recipient, token.id, token.amount, "");
+        } else if (token.eip == 721) {
+            IERC721(token.adr).safeTransferFrom(address(this), token.recipient, token.id);
+        } else if (token.eip == 0) {
+            TransferHelper.safeTransferETH(token.recipient, token.amount);
+        } else {
+            revert("UniversalTokenRouter: INVALID_EIP");
+        }
+    }
+
+    function _balanceOf(Token memory token) internal view returns (uint balance) {
+        if (token.eip == 20) {
+            return IERC20(token.adr).balanceOf(token.recipient);
         }
         if (token.eip == 1155) {
-            return IERC1155(token.adr).balanceOf(owner, token.id);
+            return IERC1155(token.adr).balanceOf(token.recipient, token.id);
         }
         if (token.eip == 721) {
             if (token.id == EIP_721_ALL) {
-                return IERC721(token.adr).balanceOf(owner);
+                return IERC721(token.adr).balanceOf(token.recipient);
             }
             try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
-                return currentOwner == owner ? 1 : 0;
+                return currentOwner == token.recipient ? 1 : 0;
             } catch {
                 return 0;
             }
         }
         if (token.eip == 0) {
-            return owner.balance;
+            return token.recipient.balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
-    } }
+    }
+
+    // intentionally duplicate code to minimize gas usage
+    function _balance(Token memory token) internal view returns (uint balance) {
+        if (token.eip == 20) {
+            return IERC20(token.adr).balanceOf(address(this));
+        }
+        if (token.eip == 1155) {
+            return IERC1155(token.adr).balanceOf(address(this), token.id);
+        }
+        if (token.eip == 721) {
+            if (token.id == EIP_721_ALL) {
+                return IERC721(token.adr).balanceOf(address(this));
+            }
+            try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
+                return currentOwner == address(this) ? 1 : 0;
+            } catch {
+                return 0;
+            }
+        }
+        if (token.eip == 0) {
+            return address(this).balance;
+        }
+        revert("UniversalTokenRouter: INVALID_EIP");
+    }
 
     function _sliceUint(bytes memory bs, uint start) internal pure returns (uint x) {
-    unchecked {
         // require(bs.length >= start + 32, "slicing out of range");
         assembly {
             x := mload(add(bs, start))
         }
-    } }
+    }
 
     /// https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
     /// @param length length of the first preBytes
@@ -222,10 +259,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             // next 32 byte block, then round down to the nearest multiple of
             // 32. If the sum of the length of the two arrays is zero then add
             // one before rounding down to leave a blank 32 bytes (the length block with 0).
-            mstore(0x40, and(
-              add(add(end, iszero(add(length, mload(preBytes)))), 31),
-              not(31) // Round down to the nearest 32 bytes.
-            ))
+            // mstore(0x40, and(
+            //   add(add(end, iszero(add(length, mload(preBytes)))), 31),
+            //   not(31) // Round down to the nearest 32 bytes.
+            // ))
         }
     }
 }
