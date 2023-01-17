@@ -63,12 +63,18 @@ async function scenario01() {
     );
     await wethAdapter.deployed();
 
+    // deploy nft721
+    const GameItem = await ethers.getContractFactory("GameItem");
+    const gameItem = await GameItem.deploy();
+    await gameItem.deployed();
+
     return {
         uniswapRouter,
         universalRouter,
         uniswapPool,
         uniswapV2Helper01,
         wethAdapter,
+        gameItem,
         busd,
         weth,
         owner,
