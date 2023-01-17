@@ -249,7 +249,7 @@ scenarios.forEach(function (scenario) {
                     // ... continue to use WETH in SomeRecipient
                 ], {value: 123});
             });
-            it("Output Token Verification - EIP_721_ALL", async function () {
+            it("Output Token Verification - EIP-721", async function () {
                 const { universalRouter, gameItem, owner } = await loadFixture(scenario.fixture);
                 await gameItem.setApprovalForAll(universalRouter.address, true);
                 const tokenURI = "https://game.example/item.json";
@@ -272,6 +272,42 @@ scenarios.forEach(function (scenario) {
                         ],
                     },
                 ]);
+                expect(await gameItem.ownerOf(0)).to.equal(player);
+                await universalRouter.exec([
+                    {
+                        output: 1,
+                        code: gameItem.address,
+                        data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                        tokens: [
+                            {
+                                offset: 0,  // token balance verification
+                                eip: 721,
+                                adr: gameItem.address,
+                                id: 1,
+                                amount: 1,
+                                recipient: player,
+                            }
+                        ],
+                    },
+                ]);
+                expect(await gameItem.ownerOf(1)).to.equal(player);
+                await expect(universalRouter.exec([
+                    {
+                        output: 1,
+                        code: gameItem.address,
+                        data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                        tokens: [
+                            {
+                                offset: 0,  // token balance verification
+                                eip: 721,
+                                adr: gameItem.address,
+                                id: 1,
+                                amount: 2,
+                                recipient: player,
+                            }
+                        ],
+                    },
+                ])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
                 await universalRouter.exec([
                     {
                         output: 1,
