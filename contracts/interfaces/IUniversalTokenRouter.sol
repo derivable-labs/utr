@@ -16,6 +16,7 @@ struct Action {
     uint flags;
     address code;   // contract code address
     bytes data;     // contract input data
+    uint value;     // contract call ETH value
     Token[] tokens; // tokens to transfer or verify balance
 }
 

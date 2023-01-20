@@ -20,7 +20,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant TOKEN_MODE_OUTPUT_TRANSFER_ALL    = 4;
 
     uint constant EIP_ETH                = 0;
-    uint constant EIP_ETH_NEXT_VALUE     = 1;
 
     // uint constant ACTION_FLAG_INPUT                     = 0;
     uint constant ACTION_FLAG_OUPUT                     = 1;
@@ -49,7 +48,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             balances[i] = bls;
         }
 
-        uint value; // track the ETH value to pass to next output action transaction value
         bytes memory lastInputResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
@@ -74,10 +72,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                         token.amount = amount;
                     }
-                    if (token.eip == EIP_ETH_NEXT_VALUE) {
-                        value = token.amount;
-                        // ETH not transfered here will be passed to the next output call value
-                    } else if (token.amount > 0) {
+                    if (token.amount > 0) {
                         _transferFrom(token);
                     }
                 }
@@ -88,14 +83,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         // TODO: remove this length
                         action.data = _concat(action.data, action.data.length, lastInputResult);
                     }
-                    (bool success, bytes memory result) = action.code.call{value: value}(action.data);
+                    (bool success, bytes memory result) = action.code.call{value: action.value}(action.data);
                     // ignore error if ACTION_FLAG_FAILABLE is set
                     if (!success && action.flags & ACTION_FLAG_FAILABLE == 0) {
                         assembly {
                             revert(add(result,32),mload(result))
                         }
                     }
-                    delete value; // clear the ETH value after transfer
                 }
                 for (uint j = 0; j < tokens.length; ++j) {
                     Token memory token = tokens[j];
@@ -131,7 +125,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
         } else if (token.eip == 721) {
             IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
-        } else if (token.eip <= EIP_ETH_NEXT_VALUE) {
+        } else if (token.eip == EIP_ETH) {
             TransferHelper.safeTransferETH(token.recipient, token.amount);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
@@ -146,7 +140,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             IERC1155(token.adr).safeTransferFrom(address(this), token.recipient, token.id, token.amount, "");
         } else if (token.eip == 721) {
             IERC721(token.adr).safeTransferFrom(address(this), token.recipient, token.id);
-        } else if (token.eip <= EIP_ETH_NEXT_VALUE) {
+        } else if (token.eip == EIP_ETH) {
             TransferHelper.safeTransferETH(token.recipient, token.amount);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
@@ -170,7 +164,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 return 0;
             }
         }
-        if (token.eip == 0) {
+        if (token.eip == EIP_ETH) {
             return token.recipient.balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
@@ -194,7 +188,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 return 0;
             }
         }
-        if (token.eip == 0) {
+        if (token.eip == EIP_ETH) {
             return address(this).balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
