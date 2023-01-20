@@ -9,8 +9,6 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
-
     uint constant TOKEN_MODE_INPUT_TRANSFER_EXACT   = 0;
     uint constant TOKEN_MODE_INPUT_TRANSFER_OFFSET  = 1;
 
@@ -19,7 +17,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant TOKEN_MODE_OUTPUT_TRANSFER_OFFSET = 2;
     uint constant TOKEN_MODE_OUTPUT_TRANSFER_ALL    = 4;
 
-    uint constant EIP_ETH                = 0;
+    uint constant EIP_ETH               = 0;
+    uint constant EIP_721_ALL           = 1;
 
     // uint constant ACTION_FLAG_INPUT                     = 0;
     uint constant ACTION_FLAG_OUPUT                     = 1;
@@ -154,10 +153,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         if (token.eip == 1155) {
             return IERC1155(token.adr).balanceOf(token.recipient, token.id);
         }
+        if (token.eip == EIP_721_ALL) {
+            return IERC721(token.adr).balanceOf(token.recipient);
+        }
         if (token.eip == 721) {
-            if (token.id == EIP_721_ALL) {
-                return IERC721(token.adr).balanceOf(token.recipient);
-            }
             try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
                 return currentOwner == token.recipient ? 1 : 0;
             } catch {
@@ -178,10 +177,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         if (token.eip == 1155) {
             return IERC1155(token.adr).balanceOf(address(this), token.id);
         }
+        if (token.eip == EIP_721_ALL) {
+            return IERC721(token.adr).balanceOf(address(this));
+        }
         if (token.eip == 721) {
-            if (token.id == EIP_721_ALL) {
-                return IERC721(token.adr).balanceOf(address(this));
-            }
             try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
                 return currentOwner == address(this) ? 1 : 0;
             } catch {
