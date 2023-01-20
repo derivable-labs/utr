@@ -9,8 +9,23 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant LAST_INPUT_RESULT = uint(keccak256('UniversalTokenRouter.LAST_INPUT_RESULT'));
     uint constant EIP_721_ALL = uint(keccak256('UniversalTokenRouter.EIP_721_ALL'));
+
+    uint constant TOKEN_MODE_INPUT_TRANSFER_EXACT   = 0;
+    uint constant TOKEN_MODE_INPUT_TRANSFER_OFFSET  = 1;
+
+    uint constant TOKEN_MODE_OUTPUT_VERIFY          = 0;
+    uint constant TOKEN_MODE_OUTPUT_TRANSFER_EXACT  = 1;
+    uint constant TOKEN_MODE_OUTPUT_TRANSFER_OFFSET = 2;
+    uint constant TOKEN_MODE_OUTPUT_TRANSFER_ALL    = 4;
+
+    uint constant EIP_ETH                = 0;
+    uint constant EIP_ETH_NEXT_VALUE     = 1;
+
+    // uint constant ACTION_FLAG_INPUT                     = 0;
+    uint constant ACTION_FLAG_OUPUT                     = 1;
+    uint constant ACTION_FLAG_FAILABLE                  = 2;
+    uint constant ACTION_FLAG_INJECT_LAST_INPUT_RESULT  = 4;
 
     function exec(
         Action[] memory actions
@@ -21,13 +36,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             Token[] memory tokens = action.tokens;
-            if (action.output == 0 || tokens.length == 0) {
+            if (action.flags & ACTION_FLAG_OUPUT == 0 || tokens.length == 0) {
                 continue;
             }
             uint[] memory bls = new uint[](tokens.length);
             for (uint j = 0; j < bls.length; ++j) {
                 Token memory token = tokens[j];
-                if (token.offset == 0) {
+                if (token.mode == TOKEN_MODE_OUTPUT_VERIFY) {
                     bls[j] = _balanceOf(token);
                 }
             }
@@ -39,12 +54,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             Token[] memory tokens = action.tokens;
-            if (action.output == 0) {
+            if (action.flags & ACTION_FLAG_OUPUT == 0) {
                 // input action
                 if (action.data.length > 0) {
                     bool success;
                     (success, lastInputResult) = action.code.call(action.data);
-                    if (!success) {
+                    // ignore error if ACTION_FLAG_FAILABLE is set
+                    if (!success && action.flags & ACTION_FLAG_FAILABLE == 0) {
                         assembly {
                             revert(add(lastInputResult,32),mload(lastInputResult))
                         }
@@ -52,13 +68,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 }
                 for (uint j = 0; j < tokens.length; ++j) {
                     Token memory token = tokens[j];
-                    if (token.offset >= 32) {
+                    if (token.mode == TOKEN_MODE_INPUT_TRANSFER_OFFSET) {
                         // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
                         uint amount = _sliceUint(lastInputResult, token.offset);
                         require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                         token.amount = amount;
                     }
-                    if (token.eip == 0 && token.recipient == address(0x0)) {
+                    if (token.eip == EIP_ETH_NEXT_VALUE) {
                         value = token.amount;
                         // ETH not transfered here will be passed to the next output call value
                     } else if (token.amount > 0) {
@@ -68,16 +84,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             } else {
                 // output action
                 if (action.data.length > 0) {
-                    uint length = action.data.length;
-                    if (length >= 4+32*3 &&
-                        _sliceUint(action.data, length) == LAST_INPUT_RESULT &&
-                        _sliceUint(action.data, length-32) == 32)
-                    {
-                        action.data = _concat(action.data, length-32, lastInputResult);
+                    if (action.flags & ACTION_FLAG_INJECT_LAST_INPUT_RESULT == 1) {
+                        // TODO: remove this length
+                        action.data = _concat(action.data, action.data.length, lastInputResult);
                     }
                     (bool success, bytes memory result) = action.code.call{value: value}(action.data);
-                    // ignore output action error if output == 2
-                    if (!success && action.output == 2) {
+                    // ignore error if ACTION_FLAG_FAILABLE is set
+                    if (!success && action.flags & ACTION_FLAG_FAILABLE == 0) {
                         assembly {
                             revert(add(result,32),mload(result))
                         }
@@ -86,11 +99,11 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 }
                 for (uint j = 0; j < tokens.length; ++j) {
                     Token memory token = tokens[j];
-                    if (token.offset > 0) {
+                    if (token.mode != TOKEN_MODE_OUTPUT_VERIFY) {
                         // token transfer sub-action
-                        if (token.offset >= 32) {
+                        if (token.mode == TOKEN_MODE_OUTPUT_TRANSFER_OFFSET) {
                             token.amount = _sliceUint(lastInputResult, token.offset);
-                        } else if (token.amount == 0) {
+                        } else if (token.mode == TOKEN_MODE_OUTPUT_TRANSFER_ALL) {
                             token.amount = _balance(token);
                         }
                         _transfer(token);
@@ -118,7 +131,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
         } else if (token.eip == 721) {
             IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
-        } else if (token.eip == 0) {
+        } else if (token.eip <= EIP_ETH_NEXT_VALUE) {
             TransferHelper.safeTransferETH(token.recipient, token.amount);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
@@ -133,7 +146,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             IERC1155(token.adr).safeTransferFrom(address(this), token.recipient, token.id, token.amount, "");
         } else if (token.eip == 721) {
             IERC721(token.adr).safeTransferFrom(address(this), token.recipient, token.id);
-        } else if (token.eip == 0) {
+        } else if (token.eip <= EIP_ETH_NEXT_VALUE) {
             TransferHelper.safeTransferETH(token.recipient, token.amount);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
