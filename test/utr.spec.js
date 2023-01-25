@@ -18,8 +18,19 @@ const scenarios = [
     { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
-const LAST_INPUT_RESULT = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.LAST_INPUT_RESULT"));
-const EIP_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.EIP_721_ALL"))
+const TOKEN_SENDER_TRANSFER     = 0;
+const TOKEN_ROUTER_TRANSFER     = 1;
+const TOKEN_NEXT_CALL_VALUE     = 2;
+const TOKEN_ALLOWANCE_BRIDGE    = 4;
+const TOKEN_ALLOWANCE_CALLBACK  = 8;
+const AMOUNT_EXACT      = 0;
+const AMOUNT_ALL        = 1;
+const EIP_ETH           = 0;
+const ID_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ID_721_ALL"))
+const ACTION_FAILABLE                   = 1;
+const ACTION_RECORD_INPUT_RESULT        = 2;
+const ACTION_INJECT_INPUT_RESULT        = 4;
+const ACTION_FORWARD_CALLBACK           = 8;
 
 scenarios.forEach(function (scenario) {
     describe("Pool Info: " + scenario.fixtureName, function () {
@@ -35,45 +46,35 @@ scenarios.forEach(function (scenario) {
                     weth.address,
                     busd.address
                 ];
-                const to = owner.address;
+                const to = owner.address
                 const deadline = MaxUint256
 
-                await universalRouter.exec([
-                    {
-                        output: 0,
-                        code: AddressZero,
-                        data: '0x',
-                        tokens: [{
-                            eip: 20,
-                            adr: path[0],
-                            id: 0,
-                            offset: 0, // use exact amount specified bellow
-                            amount: amountIn,
-                            recipient: uniswapPool.address,
-                        }],
-                    },
-                    {
-                        output: 1,
-                        code: uniswapV2Helper01.address,
-                        data: (await uniswapV2Helper01.populateTransaction.swapExactTokensForTokens(
-                            amountIn,
-                            amountOutMin,
-                            path,
-                            to,
-                            deadline
-                        )).data,
-                        tokens: [
-                            {
-                                offset: 0, // balance change verification
-                                eip: 20,
-                                adr: path[path.length-1],
-                                id: 0,
-                                amount: amountOutMin,
-                                recipient: to,
-                            }
-                        ],
-                    }
-                ]);
+                await universalRouter.exec([{
+                    recipient: to,
+                    eip: 20,
+                    token: path[path.length-1],
+                    id: 0,
+                    amountOutMin,
+                }], [{
+                    flags: 0,
+                    transfers: [{
+                        mode: TOKEN_SENDER_TRANSFER,
+                        recipient: uniswapPool.address,
+                        eip: 20,
+                        token: path[0],
+                        id: 0,
+                        amountInMax: amountIn,
+                        amountSource: AMOUNT_EXACT,
+                    }],
+                    code: uniswapV2Helper01.address,
+                    data: (await uniswapV2Helper01.populateTransaction.swapExactTokensForTokens(
+                        amountIn,
+                        amountOutMin,
+                        path,
+                        to,
+                        deadline
+                    )).data,
+                }]);
             });
             it("UniswapRouter.swapTokensForExactTokens", async function () {
                 const { universalRouter, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
@@ -88,37 +89,31 @@ scenarios.forEach(function (scenario) {
                 const amountInMax = pe(1);
                 const to = owner.address;
 
-                await universalRouter.exec([
-                    {
-                        output: 0,
-                        code: uniswapV2Helper01.address,
-                        data: (await uniswapV2Helper01.populateTransaction.getAmountsIn(amountOut, path)).data,
-                        tokens: [
-                            {
-                                eip: 20,
-                                adr: path[0],
-                                id: 0,
-                                offset: 32*3, // first item of getAmountIns result array
-                                amount: amountInMax,
-                                recipient: uniswapPool.address,
-                            },
-                        ],
-                    },
-                    // The result of input action’s getAmountIns will replace the LAST_INPUT_RESULT bytes, save the transaction from calculating twice with the same data.
-                    {
-                        output: 1,
-                        code: uniswapV2Helper01.address,
-                        data: (await uniswapV2Helper01.populateTransaction.swap(path, to, LAST_INPUT_RESULT)).data,
-                        tokens: [{
-                            offset: 0, // balance change verification
-                            eip: 20,
-                            adr: path[path.length-1],
-                            id: 0,
-                            amount: amountOut,
-                            recipient: to,
-                        }],
-                    }
-                ]);
+                await universalRouter.exec([{
+                    eip: 20,
+                    token: path[path.length-1],
+                    id: 0,
+                    amountOutMin: amountOut,
+                    recipient: to,
+                }], [{
+                    transfers: [],
+                    flags: ACTION_RECORD_INPUT_RESULT,
+                    code: uniswapV2Helper01.address,
+                    data: (await uniswapV2Helper01.populateTransaction.getAmountsIn(amountOut, path)).data,
+                }, {
+                    transfers: [{
+                        mode: TOKEN_SENDER_TRANSFER,
+                        eip: 20,
+                        token: path[0],
+                        id: 0,
+                        amountInMax,
+                        amountSource: 32*3, // first item of getAmountIns result array
+                        recipient: uniswapPool.address,
+                    }],
+                    flags: ACTION_INJECT_INPUT_RESULT,
+                    code: uniswapV2Helper01.address,
+                    data: (await uniswapV2Helper01.populateTransaction.swap(path, to, '0x')).data,
+                }]);
             });
             it("UniswapRouter.addLiquidity", async function () {
                 const { universalRouter, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
@@ -134,82 +129,85 @@ scenarios.forEach(function (scenario) {
                 const amountBMin = pe(0);
                 const to = owner.address;
 
-                await universalRouter.exec([
-                    {
-                        output: 0,
-                        code: uniswapV2Helper01.address,
-                        data: (await uniswapV2Helper01.populateTransaction._addLiquidity(
-                            tokenA,
-                            tokenB,
-                            amountADesired,
-                            amountBDesired,
-                            amountAMin,
-                            amountBMin,
-                        )).data,
-                        tokens: [{
-                            eip: 20,
-                            adr: tokenA,
-                            id: 0,
-                            offset: 32,             // first item of _addLiquidity results
-                            amount: amountADesired, // amountInMax
-                            recipient: uniswapPool.address,
-                        }, {
-                            eip: 20,
-                            adr: tokenB,
-                            id: 0,
-                            offset: 64,             // second item of _addLiquidity results
-                            amount: amountBDesired, // amountInMax
-                            recipient: uniswapPool.address,
-                        }],
-                    }, 
-                    {
-                        output: 1,
-                        code: uniswapPool.address,
-                        data: (await uniswapPool.populateTransaction.mint(to)).data,
-                        tokens: [{
-                            offset: 0,  // balance change verification
-                            eip: 20,
-                            adr: uniswapPool.address,
-                            id: 0,
-                            amount: 1,  // amountOutMin: just enough to verify the correct recipient
-                            recipient: to,
-                        }],
-                    }
-                ]);
+                await universalRouter.exec([{
+                    eip: 20,
+                    token: uniswapPool.address,
+                    id: 0,
+                    amountOutMin: 1,  // just enough to verify the correct recipient
+                    recipient: to,
+                }], [{
+                    transfers: [],
+                    flags: ACTION_RECORD_INPUT_RESULT,
+                    code: uniswapV2Helper01.address,
+                    data: (await uniswapV2Helper01.populateTransaction._addLiquidity(
+                        tokenA,
+                        tokenB,
+                        amountADesired,
+                        amountBDesired,
+                        amountAMin,
+                        amountBMin,
+                    )).data,
+                }, {
+                    transfers: [{
+                        mode: TOKEN_SENDER_TRANSFER,
+                        eip: 20,
+                        token: tokenA,
+                        id: 0,
+                        amountSource: 32,             // first item of _addLiquidity results
+                        amountInMax: amountADesired,
+                        recipient: uniswapPool.address,
+                    }, {
+                        mode: TOKEN_SENDER_TRANSFER,
+                        eip: 20,
+                        token: tokenB,
+                        id: 0,
+                        amountSource: 64,             // second item of _addLiquidity results
+                        amountInMax: amountBDesired,
+                        recipient: uniswapPool.address,
+                    }],
+                    flags: 0,
+                    code: uniswapPool.address,
+                    data: (await uniswapPool.populateTransaction.mint(to)).data,
+                }]);
             });
             it("Deposit WETH and transfer them out", async function () {
                 const { universalRouter, weth, otherAccount } = await loadFixture(scenario.fixture);
                 const someRecipient = otherAccount.address;
                 // sample code to deposit WETH and transfer them out
-                await universalRouter.exec([
-                    {
-                        output: 0,
-                        code: AddressZero,
-                        data: '0x',
-                        tokens: [{
-                            eip: 0,                 // ETH
-                            adr: AddressZero,
-                            id: 0,
-                            offset: 0,              // use the exact amount specified bellow
-                            amount: 123,
-                            recipient: AddressZero, // pass it as the value for the next output action
-                        }],
-                    },
-                    {
-                        output: 1,
-                        code: weth.address,
-                        data: (await weth.populateTransaction.deposit()).data,    // WETH.deposit returns WETH token to the UTR contract
-                        tokens: [{
-                            offset: 1,  // token transfer sub-action
-                            eip: 20,
-                            adr: weth.address,
-                            id: 0,
-                            amount: 0,  // entire WETH balance of this UTR contract
-                            recipient: someRecipient,
-                        }],
-                    },
+                await universalRouter.exec([{
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountOutMin: 1,
+                    recipient: someRecipient,
+                }], [{
+                    transfers: [{
+                        mode: TOKEN_NEXT_CALL_VALUE,
+                        eip: 0, // ETH
+                        token: AddressZero,
+                        id: 0,
+                        amountInMax: 123,
+                        amountSource: AMOUNT_EXACT,
+                        recipient: AddressZero, // pass it as the value for the next output action
+                    }],
+                    flags: 0,
+                    code: weth.address,
+                    data: (await weth.populateTransaction.deposit()).data,    // WETH.deposit returns WETH token to the UTR contract
+                }, {
+                    transfers: [{
+                        mode: TOKEN_ROUTER_TRANSFER,
+                        eip: 20,
+                        token: weth.address,
+                        id: 0,
+                        amountInMax: 0,             // no limit
+                        amountSource: AMOUNT_ALL,   // entire WETH balance of this UTR contract
+                        recipient: someRecipient,
+                    }],
                     // ... continue to use WETH in SomeRecipient
-                ], {value: 123});
+                    flags: 0,
+                    code: AddressZero,
+                    data: '0x',
+                }], {value: 123});
                 expect(await weth.balanceOf(someRecipient)).to.equal(123);
             });
             it("Adapter contract for WETH", async function () {
@@ -217,36 +215,27 @@ scenarios.forEach(function (scenario) {
                 await weth.approve(universalRouter.address, MaxUint256);
                 await weth.approve(wethAdapter.address, MaxUint256);
                 const someRecipient = otherAccount.address;
-                await universalRouter.exec([
-                    {
-                        output: 0,
-                        code: AddressZero,
-                        data: '0x',
-                        tokens: [{
-                            eip: 0,                 // ETH
-                            adr: AddressZero,
-                            id: 0,
-                            offset: 0,              // use the exact amount specified bellow
-                            amount: 123,
-                            recipient: AddressZero, // pass it as the value for the next output action
-                        }],
-                    },
-                    {
-                        output: 1,
-                        code: wethAdapter.address,
-                        data: (await wethAdapter.populateTransaction.deposit(someRecipient)).data,    // WETH.deposit returns WETH token to the UTR contract
-                        tokens: [
-                            {
-                                offset: 0,  // token balance verification
-                                eip: 20,
-                                adr: weth.address,
-                                id: 0,
-                                amount: 123,
-                                recipient: someRecipient,
-                            }
-                        ],
-                    },
-                    // ... continue to use WETH in SomeRecipient
+                await universalRouter.exec([{
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountOutMin: 1,
+                    recipient: someRecipient,
+                }], [{
+                    transfers: [{
+                        mode: TOKEN_NEXT_CALL_VALUE,
+                        eip: 0,                 // ETH
+                        token: AddressZero,
+                        id: 0,
+                        amountInMax: 123,
+                        amountSource: AMOUNT_EXACT,
+                        recipient: AddressZero, // pass it as the value for the next output action
+                    }],
+                    flags: 0,
+                    code: wethAdapter.address,
+                    data: (await wethAdapter.populateTransaction.deposit(someRecipient)).data,    // WETH.deposit returns WETH token to the UTR contract
+                },
+                // ... continue to use WETH in SomeRecipient
                 ], {value: 123});
             });
             it("Output Token Verification - EIP-721", async function () {
@@ -255,76 +244,58 @@ scenarios.forEach(function (scenario) {
                 const tokenURI = "https://game.example/item.json";
                 const player = owner.address;
                 const amount = 3;
-                await universalRouter.exec([
-                    {
-                        output: 1,
-                        code: gameItem.address,
-                        data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
-                        tokens: [
-                            {
-                                offset: 0,  // token balance verification
-                                eip: 721,
-                                adr: gameItem.address,
-                                id: 0,
-                                amount: 1,
-                                recipient: player,
-                            }
-                        ],
-                    },
-                ]);
+                await universalRouter.exec([{
+                    eip: 721,
+                    token: gameItem.address,
+                    id: 0,
+                    amountOutMin: 1,
+                    recipient: player,
+                }], [{
+                    transfers: [],
+                    flags: 0,
+                    code: gameItem.address,
+                    data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                }]);
                 expect(await gameItem.ownerOf(0)).to.equal(player);
-                await universalRouter.exec([
-                    {
-                        output: 1,
-                        code: gameItem.address,
-                        data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
-                        tokens: [
-                            {
-                                offset: 0,  // token balance verification
-                                eip: 721,
-                                adr: gameItem.address,
-                                id: 1,
-                                amount: 1,
-                                recipient: player,
-                            }
-                        ],
-                    },
-                ]);
+                await universalRouter.exec([{
+                    eip: 721,
+                    token: gameItem.address,
+                    id: 1,
+                    amountOutMin: 1,
+                    recipient: player,
+                }], [{
+                    transfers: [],
+                    flags: 1,
+                    code: gameItem.address,
+                    data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                }]);
                 expect(await gameItem.ownerOf(1)).to.equal(player);
-                await expect(universalRouter.exec([
+                await expect(universalRouter.exec([{
+                    eip: 721,
+                    token: gameItem.address,
+                    id: 2,
+                    amountOutMin: 2,
+                    recipient: player,
+                }], [
                     {
-                        output: 1,
+                        transfers: [],
+                        flags: 0,
                         code: gameItem.address,
                         data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
-                        tokens: [
-                            {
-                                offset: 0,  // token balance verification
-                                eip: 721,
-                                adr: gameItem.address,
-                                id: 1,
-                                amount: 2,
-                                recipient: player,
-                            }
-                        ],
                     },
                 ])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
-                await universalRouter.exec([
-                    {
-                        output: 1,
-                        code: gameItem.address,
-                        data: (await gameItem.populateTransaction.awardItems(amount, player, tokenURI)).data,
-                        tokens: [
-                            {
-                                offset: 0,  // token balance verification
-                                eip: 721,
-                                adr: gameItem.address,
-                                id: EIP_721_ALL,
-                                amount: 3,
-                                recipient: player,
-                            }
-                        ],
-                    },
-                ]);
+                await universalRouter.exec([{
+                    eip: 721,
+                    token: gameItem.address,
+                    id: ID_721_ALL,
+                    amountOutMin: 3,
+                    recipient: player,
+                }], [{
+                    transfers: [],
+                    flags: 0,
+                    code: gameItem.address,
+                    data: (await gameItem.populateTransaction.awardItems(amount, player, tokenURI)).data,
+                }]);
             });
         });
     });
