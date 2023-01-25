@@ -9,105 +9,93 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant TOKEN_MODE_INPUT_TRANSFER_EXACT   = 0;
-    uint constant TOKEN_MODE_INPUT_TRANSFER_OFFSET  = 1;
+    uint constant TOKEN_SENDER_TRANSFER     = 0;
+    uint constant TOKEN_ROUTER_TRANSFER     = 1;
+    uint constant TOKEN_NEXT_CALL_VALUE     = 2;
+    uint constant TOKEN_ALLOWANCE_BRIDGE    = 4;
+    uint constant TOKEN_ALLOWANCE_CALLBACK  = 8;
 
-    uint constant TOKEN_MODE_OUTPUT_VERIFY          = 0;
-    uint constant TOKEN_MODE_OUTPUT_TRANSFER_EXACT  = 1;
-    uint constant TOKEN_MODE_OUTPUT_TRANSFER_OFFSET = 2;
-    uint constant TOKEN_MODE_OUTPUT_TRANSFER_ALL    = 4;
+    uint constant AMOUNT_EXACT      = 0;
+    uint constant AMOUNT_ALL        = 1;
 
-    uint constant EIP_ETH               = 0;
-    uint constant EIP_721_ALL           = 1;
+    uint constant EIP_ETH           = 0;
 
-    // uint constant ACTION_FLAG_INPUT                     = 0;
-    uint constant ACTION_FLAG_OUPUT                     = 1;
-    uint constant ACTION_FLAG_FAILABLE                  = 2;
-    uint constant ACTION_FLAG_INJECT_LAST_INPUT_RESULT  = 4;
+    uint constant ID_721_ALL = uint(keccak256('UniversalTokenRouter.ID_721_ALL'));
+
+    uint constant ACTION_FAILABLE                   = 1;
+    uint constant ACTION_RECORD_INPUT_RESULT        = 2;
+    uint constant ACTION_INJECT_INPUT_RESULT        = 4;
+    uint constant ACTION_FORWARD_CALLBACK           = 8;
 
     function exec(
+        Output[] memory outputs,
         Action[] memory actions
     ) override external payable {
     unchecked {
-        // track the balances before any action is executed
-        uint[][] memory balances = new uint[][](actions.length);
-        for (uint i = 0; i < actions.length; ++i) {
-            Action memory action = actions[i];
-            Token[] memory tokens = action.tokens;
-            if (action.flags & ACTION_FLAG_OUPUT == 0 || tokens.length == 0) {
-                continue;
-            }
-            uint[] memory bls = new uint[](tokens.length);
-            for (uint j = 0; j < bls.length; ++j) {
-                Token memory token = tokens[j];
-                if (token.mode == TOKEN_MODE_OUTPUT_VERIFY) {
-                    bls[j] = _balanceOf(token);
-                }
-            }
-            balances[i] = bls;
+        // track the expected balances before any action is executed
+        for (uint i = 0; i < outputs.length; ++i) {
+            Output memory output = outputs[i];
+            uint balance = _balanceOf(output.recipient, output.eip, output.token, output.id);
+            uint expected = output.amountOutMin + balance;
+            require(expected >= balance, 'UniversalTokenRouter: OVERFLOW');
+            output.amountOutMin = expected;
         }
 
+        uint value;
         bytes memory lastInputResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
-            Token[] memory tokens = action.tokens;
-            if (action.flags & ACTION_FLAG_OUPUT == 0) {
-                // input action
-                if (action.data.length > 0) {
-                    bool success;
-                    (success, lastInputResult) = action.code.call(action.data);
-                    // ignore error if ACTION_FLAG_FAILABLE is set
-                    if (!success && action.flags & ACTION_FLAG_FAILABLE == 0) {
-                        assembly {
-                            revert(add(lastInputResult,32),mload(lastInputResult))
-                        }
-                    }
-                }
-                for (uint j = 0; j < tokens.length; ++j) {
-                    Token memory token = tokens[j];
-                    if (token.mode == TOKEN_MODE_INPUT_TRANSFER_OFFSET) {
-                        // require(inputParams.length > 0, "UniversalTokenRouter: OFFSET_OF_EMPTY_INPUT");
-                        uint amount = _sliceUint(lastInputResult, token.offset);
-                        require(amount <= token.amount, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
-                        token.amount = amount;
-                    }
-                    if (token.amount > 0) {
-                        _transferFrom(token);
-                    }
-                }
-            } else {
-                // output action
-                if (action.data.length > 0) {
-                    if (action.flags & ACTION_FLAG_INJECT_LAST_INPUT_RESULT == 1) {
-                        // TODO: remove this length
-                        action.data = _concat(action.data, action.data.length, lastInputResult);
-                    }
-                    (bool success, bytes memory result) = action.code.call{value: action.value}(action.data);
-                    // ignore error if ACTION_FLAG_FAILABLE is set
-                    if (!success && action.flags & ACTION_FLAG_FAILABLE == 0) {
-                        assembly {
-                            revert(add(result,32),mload(result))
-                        }
-                    }
-                }
-                for (uint j = 0; j < tokens.length; ++j) {
-                    Token memory token = tokens[j];
-                    if (token.mode != TOKEN_MODE_OUTPUT_VERIFY) {
-                        // token transfer sub-action
-                        if (token.mode == TOKEN_MODE_OUTPUT_TRANSFER_OFFSET) {
-                            token.amount = _sliceUint(lastInputResult, token.offset);
-                        } else if (token.mode == TOKEN_MODE_OUTPUT_TRANSFER_ALL) {
-                            token.amount = _balance(token);
-                        }
-                        _transfer(token);
+            Transfer[] memory transfers = action.transfers;
+            for (uint j = 0; j < transfers.length; ++j) {
+                Transfer memory transfer = transfers[j];
+                address sender = transfer.mode == TOKEN_ROUTER_TRANSFER ? address(this) : msg.sender; 
+                uint amount;
+                if (transfer.amountSource == AMOUNT_EXACT) {
+                    amount = transfer.amountInMax;
+                } else {
+                    if (transfer.amountSource == AMOUNT_ALL) {
+                        amount = _balanceOf(sender, transfer.eip, transfer.token, transfer.id);
                     } else {
-                        // verify the balance change
-                        uint balance = _balanceOf(token);
-                        uint change = balance - balances[i][j]; // overflow checked with `change <= balance` bellow
-                        require(change >= token.amount && change <= balance, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+                        amount = _sliceUint(lastInputResult, transfer.amountSource);
                     }
+                    if (amount > 0 && transfer.amountInMax > 0) {
+                        require(amount <= transfer.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
+                    }
+                }
+                if (transfer.mode == TOKEN_NEXT_CALL_VALUE) {
+                    value = amount;
+                    continue;
+                }
+                if (transfer.mode == TOKEN_SENDER_TRANSFER || transfer.mode == TOKEN_ROUTER_TRANSFER) {
+                    _transferToken(sender, transfer.recipient, transfer.eip, transfer.token, transfer.id, amount);
+                    continue;
+                }
+                // TODO: TOKEN_ALLOWANCE_BRIDGE
+                // TODO: TOKEN_ALLOWANCE_CALLBACK
+            }
+            if (action.data.length > 0) {
+                // TODO: ACTION_FORWARD_CALLBACK
+                if (action.flags & ACTION_INJECT_INPUT_RESULT != 0) {
+                    // TODO: remove this length
+                    action.data = _concat(action.data, action.data.length, lastInputResult);
+                }
+                (bool success, bytes memory result) = action.code.call{value: value}(action.data);
+                if (!success && action.flags & ACTION_FAILABLE == 0) {
+                    assembly {
+                        revert(add(result,32),mload(result))
+                    }
+                }
+                delete value;   // clear the ETH value after call
+                if (action.flags & ACTION_RECORD_INPUT_RESULT != 0) {
+                    lastInputResult = result;
                 }
             }
+        }
+
+        for (uint i = 0; i < outputs.length; ++i) {
+            Output memory output = outputs[i];
+            uint balance = _balanceOf(output.recipient, output.eip, output.token, output.id);
+            require(balance >= output.amountOutMin, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         }
 
         // refund any left-over ETH
@@ -117,78 +105,56 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
-    function _transferFrom(Token memory token) internal {
-        if (token.eip == 20) {
-            TransferHelper.safeTransferFrom(token.adr, msg.sender, token.recipient, token.amount);
-        } else if (token.eip == 1155) {
-            IERC1155(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id, token.amount, "");
-        } else if (token.eip == 721) {
-            IERC721(token.adr).safeTransferFrom(msg.sender, token.recipient, token.id);
-        } else if (token.eip == EIP_ETH) {
-            TransferHelper.safeTransferETH(token.recipient, token.amount);
+    function _transferToken(
+        address sender,
+        address recipient,
+        uint eip,
+        address token,
+        uint id,
+        uint amount
+    ) internal {
+        if (eip == 20) {
+            if (sender == address(this)) {
+                TransferHelper.safeTransfer(token, recipient, amount);
+            } else {
+                TransferHelper.safeTransferFrom(token, sender, recipient, amount);
+            }
+        } else if (eip == 1155) {
+            IERC1155(token).safeTransferFrom(sender, recipient, id, amount, "");
+        } else if (eip == 721) {
+            IERC721(token).safeTransferFrom(sender, recipient, id);
+        } else if (eip == EIP_ETH) {
+            require(sender == address(this), 'UniversalTokenRouter: INVALID_ETH_SENDER');
+            TransferHelper.safeTransferETH(recipient, amount);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
     }
 
-    // intentionally duplicate code to minimize gas usage
-    function _transfer(Token memory token) internal {
-        if (token.eip == 20) {
-            TransferHelper.safeTransfer(token.adr, token.recipient, token.amount);
-        } else if (token.eip == 1155) {
-            IERC1155(token.adr).safeTransferFrom(address(this), token.recipient, token.id, token.amount, "");
-        } else if (token.eip == 721) {
-            IERC721(token.adr).safeTransferFrom(address(this), token.recipient, token.id);
-        } else if (token.eip == EIP_ETH) {
-            TransferHelper.safeTransferETH(token.recipient, token.amount);
-        } else {
-            revert("UniversalTokenRouter: INVALID_EIP");
+    function _balanceOf(
+        address owner,
+        uint eip,
+        address token,
+        uint id
+    ) internal view returns (uint balance) {
+        if (eip == 20) {
+            return IERC20(token).balanceOf(owner);
         }
-    }
-
-    function _balanceOf(Token memory token) internal view returns (uint balance) {
-        if (token.eip == 20) {
-            return IERC20(token.adr).balanceOf(token.recipient);
+        if (eip == 1155) {
+            return IERC1155(token).balanceOf(owner, id);
         }
-        if (token.eip == 1155) {
-            return IERC1155(token.adr).balanceOf(token.recipient, token.id);
-        }
-        if (token.eip == EIP_721_ALL) {
-            return IERC721(token.adr).balanceOf(token.recipient);
-        }
-        if (token.eip == 721) {
-            try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
-                return currentOwner == token.recipient ? 1 : 0;
+        if (eip == 721) {
+            if (id == ID_721_ALL) {
+                return IERC721(token).balanceOf(owner);
+            }
+            try IERC721(token).ownerOf(id) returns (address currentOwner) {
+                return currentOwner == owner ? 1 : 0;
             } catch {
                 return 0;
             }
         }
-        if (token.eip == EIP_ETH) {
-            return token.recipient.balance;
-        }
-        revert("UniversalTokenRouter: INVALID_EIP");
-    }
-
-    // intentionally duplicate code to minimize gas usage
-    function _balance(Token memory token) internal view returns (uint balance) {
-        if (token.eip == 20) {
-            return IERC20(token.adr).balanceOf(address(this));
-        }
-        if (token.eip == 1155) {
-            return IERC1155(token.adr).balanceOf(address(this), token.id);
-        }
-        if (token.eip == EIP_721_ALL) {
-            return IERC721(token.adr).balanceOf(address(this));
-        }
-        if (token.eip == 721) {
-            try IERC721(token.adr).ownerOf(token.id) returns (address currentOwner) {
-                return currentOwner == address(this) ? 1 : 0;
-            } catch {
-                return 0;
-            }
-        }
-        if (token.eip == EIP_ETH) {
-            return address(this).balance;
+        if (eip == EIP_ETH) {
+            return owner.balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
     }
@@ -207,6 +173,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         uint length,
         bytes memory postBytes
     ) internal pure returns (bytes memory bothBytes) {
+        // TODO: just use memory from 0x0
         assembly {
             // Get a location of some free memory and store it in bothBytes as
             // Solidity does for memory variables.
