@@ -9,11 +9,12 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant TOKEN_SENDER_TRANSFER     = 0;
-    uint constant TOKEN_ROUTER_TRANSFER     = 1;
-    uint constant TOKEN_NEXT_CALL_VALUE     = 2;
-    uint constant TOKEN_ALLOWANCE_BRIDGE    = 4;
-    uint constant TOKEN_ALLOWANCE_CALLBACK  = 8;
+    uint constant TOKEN_SENDER_TRANSFER     = 0x00;
+    uint constant TOKEN_ROUTER_TRANSFER     = 0x01;
+    uint constant TOKEN_NEXT_CALL_VALUE     = 0x02;
+
+    uint constant TOKEN_ALLOWANCE_CALLBACK  = 0x100;
+    uint constant TOKEN_ALLOWANCE_BRIDGE    = 0x200;
 
     uint constant AMOUNT_EXACT      = 0;
     uint constant AMOUNT_ALL        = 1;
@@ -26,6 +27,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant ACTION_RECORD_INPUT_RESULT        = 2;
     uint constant ACTION_INJECT_INPUT_RESULT        = 4;
     uint constant ACTION_FORWARD_CALLBACK           = 8;
+
+    // Storages
+    address internal s_forwardCallbackTo;
+    mapping(bytes32 => uint) s_allowances;
+
+    constructor() {
+        s_forwardCallbackTo = address(this);
+    }
 
     function exec(
         Output[] memory outputs,
@@ -70,11 +79,17 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     _transferToken(sender, transfer.recipient, transfer.eip, transfer.token, transfer.id, amount);
                     continue;
                 }
+                if (transfer.mode == TOKEN_ALLOWANCE_CALLBACK) {
+                    bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
+                    s_allowances[key] += amount;  // overflow does not hurt
+                    continue;
+                }
                 // TODO: TOKEN_ALLOWANCE_BRIDGE
-                // TODO: TOKEN_ALLOWANCE_CALLBACK
             }
             if (action.data.length > 0) {
-                // TODO: ACTION_FORWARD_CALLBACK
+                if (action.flags & ACTION_FORWARD_CALLBACK != 0) {
+                    s_forwardCallbackTo = action.code;
+                }
                 if (action.flags & ACTION_INJECT_INPUT_RESULT != 0) {
                     // TODO: remove this length
                     action.data = _concat(action.data, action.data.length, lastInputResult);
@@ -92,10 +107,25 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             }
         }
 
+        // verify balance changes
         for (uint i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
             uint balance = _balanceOf(output.recipient, output.eip, output.token, output.id);
             require(balance >= output.amountOutMin, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        }
+
+        // clear all in-transaction storages
+        s_forwardCallbackTo = address(this);
+        for (uint i = 0; i < actions.length; ++i) {
+            Action memory action = actions[i];
+            Transfer[] memory transfers = action.transfers;
+            for (uint j = 0; j < transfers.length; ++j) {
+                Transfer memory transfer = transfers[j];
+                if (transfer.mode == TOKEN_ALLOWANCE_CALLBACK) {
+                    bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
+                    delete s_allowances[key];
+                }
+            }
         }
 
         // refund any left-over ETH
@@ -104,6 +134,55 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             TransferHelper.safeTransferETH(msg.sender, leftOver);
         }
     } }
+
+    // accepting ETH
+    receive() external payable {}
+
+    // forward callback to s_forwardCallbackTo
+    fallback() external payable {
+        address target = s_forwardCallbackTo;
+        require(target != address(this), 'UniversalTokenRouter: MISSING_ACTION_FORWARD_CALLBACK');
+        bytes memory data;
+        assembly {
+            calldatacopy(data, 0, calldatasize())
+        }
+        data = abi.encodeWithSelector(0x3696d736, msg.sender, data);
+        assembly {
+            // forward the callback
+            let success := call(gas(), target, callvalue(), data, mload(data), 0, 0)
+
+            // We take full control of memory in this inline assembly
+            // block because it will not return to Solidity code. We overwrite the
+            // Solidity scratch pad at memory position 0.
+
+            // Copy the returned data.
+            returndatacopy(0, 0, returndatasize())
+
+            switch success
+            // call returns 0 on error.
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
+        }
+    }
+
+    function transferToken(
+        address sender,
+        address recipient,
+        uint eip,
+        address token,
+        uint id,
+        uint amount
+    ) external override {
+        // TODO: test gas for abi.encode
+        bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
+        require(s_allowances[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
+        s_allowances[key] -= amount;
+        _transferToken(sender, recipient, eip, token, id, amount);
+    }
 
     function _transferToken(
         address sender,

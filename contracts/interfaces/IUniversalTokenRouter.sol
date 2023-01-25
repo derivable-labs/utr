@@ -33,4 +33,21 @@ interface IUniversalTokenRouter {
         Output[] memory outputs,
         Action[] memory actions
     ) external payable;
+
+    function transferToken(
+        address sender,
+        address recipient,
+        uint eip,
+        address token,
+        uint id,
+        uint amount
+    ) external;
+}
+
+interface IUTRCallback {
+    // 0x3696d736
+    function utrCallback(
+        address caller,
+        bytes memory data
+    ) external payable;
 }
