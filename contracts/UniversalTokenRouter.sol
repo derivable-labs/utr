@@ -57,7 +57,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             Transfer[] memory transfers = action.transfers;
             for (uint j = 0; j < transfers.length; ++j) {
                 Transfer memory transfer = transfers[j];
-                address sender = transfer.mode == TOKEN_ROUTER_TRANSFER ? address(this) : msg.sender; 
+                uint mode = transfer.mode;
+                address sender = mode == TOKEN_ROUTER_TRANSFER ? address(this) : msg.sender; 
                 uint amount;
                 if (transfer.amountSource == AMOUNT_EXACT) {
                     amount = transfer.amountInMax;
@@ -71,15 +72,15 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         require(amount <= transfer.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     }
                 }
-                if (transfer.mode == TOKEN_NEXT_CALL_VALUE) {
+                if (mode == TOKEN_NEXT_CALL_VALUE) {
                     value = amount;
                     continue;
                 }
-                if (transfer.mode == TOKEN_SENDER_TRANSFER || transfer.mode == TOKEN_ROUTER_TRANSFER) {
+                if (mode == TOKEN_SENDER_TRANSFER || mode == TOKEN_ROUTER_TRANSFER) {
                     _transferToken(sender, transfer.recipient, transfer.eip, transfer.token, transfer.id, amount);
                     continue;
                 }
-                if (transfer.mode == TOKEN_ALLOWANCE_CALLBACK) {
+                if (mode == TOKEN_ALLOWANCE_CALLBACK) {
                     bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
                     s_allowances[key] += amount;  // overflow does not hurt
                     continue;
