@@ -85,7 +85,10 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     s_allowances[key] += amount;  // overflow does not hurt
                     continue;
                 }
-                // TODO: TOKEN_ALLOWANCE_BRIDGE
+                if (mode == TOKEN_ALLOWANCE_BRIDGE) {
+                    _transferToken(msg.sender, address(this), transfer.eip, transfer.token, transfer.id, amount);
+                    _approve()
+                }
             }
             if (action.data.length > 0) {
                 if (action.flags & ACTION_FORWARD_CALLBACK != 0) {
@@ -206,6 +209,23 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         } else if (eip == EIP_ETH) {
             require(sender == address(this), 'UniversalTokenRouter: INVALID_ETH_SENDER');
             TransferHelper.safeTransferETH(recipient, amount);
+        } else {
+            revert("UniversalTokenRouter: INVALID_EIP");
+        }
+    }
+
+    function _approve(
+        address recipient,
+        uint eip,
+        address token,
+        uint amount
+    ) internal {
+        if (eip == 20) {
+            TransferHelper.safeApprove(token, recipient, amount);
+        } else if (eip == 1155) {
+            IERC1155(token).setApprovalForAll(recipient, amount > 0);
+        } else if (eip == 721) {
+            IERC721(token).setApprovalForAll(recipient, amount > 0);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
