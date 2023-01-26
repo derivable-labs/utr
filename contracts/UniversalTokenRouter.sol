@@ -9,12 +9,12 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant TOKEN_SENDER_TRANSFER     = 0x00;
-    uint constant TOKEN_ROUTER_TRANSFER     = 0x01;
-    uint constant TOKEN_NEXT_CALL_VALUE     = 0x02;
+    uint constant TRANSFER_FROM_SENDER  = 0x0;
+    uint constant TRANSFER_FROM_ROUTER  = 0x1;
+    uint constant TRANSFER_CALL_VALUE   = 0x2;
 
-    uint constant TOKEN_ALLOWANCE_CALLBACK  = 0x100;
-    uint constant TOKEN_ALLOWANCE_BRIDGE    = 0x200;
+    uint constant ALLOWANCE_CALLBACK  = 0x100;
+    uint constant ALLOWANCE_BRIDGE    = 0x200;
 
     uint constant AMOUNT_EXACT      = 0;
     uint constant AMOUNT_ALL        = 1;
@@ -23,12 +23,12 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
 
     uint constant ID_721_ALL = uint(keccak256('UniversalTokenRouter.ID_721_ALL'));
 
-    uint constant ACTION_IGNORE_ERROR               = 1;
-    uint constant ACTION_RECORD_INPUT_RESULT        = 2;
-    uint constant ACTION_INJECT_INPUT_RESULT        = 4;
-    uint constant ACTION_FORWARD_CALLBACK           = 8;
+    uint constant ACTION_IGNORE_ERROR       = 1;
+    uint constant ACTION_RECORD_CALL_RESULT = 2;
+    uint constant ACTION_INJECT_CALL_RESULT = 4;
+    uint constant ACTION_FORWARD_CALLBACK   = 8;
 
-    // Storages
+    // Storages: non-persistent
     address internal s_forwardCallbackTo;
     mapping(bytes32 => uint) s_allowances;
 
@@ -53,15 +53,15 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         bool forwarded = false;
         bool allowed = false;
 
-        uint value;
-        bytes memory lastInputResult;
+        bytes memory callResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             Transfer[] memory transfers = action.transfers;
+            uint value;
             for (uint j = 0; j < transfers.length; ++j) {
                 Transfer memory transfer = transfers[j];
                 uint mode = transfer.mode;
-                address sender = mode == TOKEN_ROUTER_TRANSFER ? address(this) : msg.sender; 
+                address sender = mode == TRANSFER_FROM_ROUTER ? address(this) : msg.sender; 
                 uint amount;
                 if (transfer.amountSource == AMOUNT_EXACT) {
                     amount = transfer.amountInMax;
@@ -69,27 +69,27 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     if (transfer.amountSource == AMOUNT_ALL) {
                         amount = _balanceOf(sender, transfer.eip, transfer.token, transfer.id);
                     } else {
-                        amount = _sliceUint(lastInputResult, transfer.amountSource);
+                        amount = _sliceUint(callResult, transfer.amountSource);
                     }
                     if (amount > 0 && transfer.amountInMax > 0) {
                         require(amount <= transfer.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     }
                 }
-                if (mode == TOKEN_NEXT_CALL_VALUE) {
+                if (mode == TRANSFER_CALL_VALUE) {
                     value = amount;
                     continue;
                 }
-                if (mode == TOKEN_SENDER_TRANSFER || mode == TOKEN_ROUTER_TRANSFER) {
+                if (mode == TRANSFER_FROM_SENDER || mode == TRANSFER_FROM_ROUTER) {
                     _transferToken(sender, transfer.recipient, transfer.eip, transfer.token, transfer.id, amount);
                     continue;
                 }
-                if (mode == TOKEN_ALLOWANCE_CALLBACK) {
+                if (mode == ALLOWANCE_CALLBACK) {
                     bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
                     s_allowances[key] += amount;  // overflow: harmless
                     allowed = true;
                     continue;
                 }
-                if (mode == TOKEN_ALLOWANCE_BRIDGE) {
+                if (mode == ALLOWANCE_BRIDGE) {
                     _approve(transfer.recipient, transfer.eip, transfer.token, type(uint).max);
                     _transferToken(msg.sender, address(this), transfer.eip, transfer.token, transfer.id, amount);
                     allowed = true;
@@ -100,8 +100,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     s_forwardCallbackTo = action.code;
                     forwarded = true;
                 }
-                if (action.flags & ACTION_INJECT_INPUT_RESULT != 0) {
-                    action.data = _concat(action.data, action.data.length, lastInputResult);
+                if (action.flags & ACTION_INJECT_CALL_RESULT != 0) {
+                    action.data = _concat(action.data, action.data.length, callResult);
                 }
                 (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                 if (!success && action.flags & ACTION_IGNORE_ERROR == 0) {
@@ -109,9 +109,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         revert(add(result,32),mload(result))
                     }
                 }
-                delete value;   // clear the ETH value after call
-                if (action.flags & ACTION_RECORD_INPUT_RESULT != 0) {
-                    lastInputResult = result;
+                // delete value;   // clear the ETH value after call
+                if (action.flags & ACTION_RECORD_CALL_RESULT != 0) {
+                    callResult = result;
                 }
             }
         }
@@ -133,12 +133,12 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 Transfer[] memory transfers = action.transfers;
                 for (uint j = 0; j < transfers.length; ++j) {
                     Transfer memory transfer = transfers[j];
-                    if (transfer.mode == TOKEN_ALLOWANCE_CALLBACK) {
+                    if (transfer.mode == ALLOWANCE_CALLBACK) {
                         bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
                         delete s_allowances[key];
                         continue;
                     }
-                    if (transfer.mode == TOKEN_ALLOWANCE_BRIDGE) {
+                    if (transfer.mode == ALLOWANCE_BRIDGE) {
                         _approve(transfer.recipient, transfer.eip, transfer.token, 0);
                         uint balance = _balanceOf(address(this), transfer.eip, transfer.token, transfer.id);
                         if (balance > 0) {
