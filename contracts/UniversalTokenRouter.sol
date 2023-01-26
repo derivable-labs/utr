@@ -50,6 +50,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             output.amountOutMin = expected;
         }
 
+        bool forwarded = false;
+        bool allowed = false;
+
         uint value;
         bytes memory lastInputResult;
         for (uint i = 0; i < actions.length; ++i) {
@@ -82,17 +85,20 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 }
                 if (mode == TOKEN_ALLOWANCE_CALLBACK) {
                     bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
-                    s_allowances[key] += amount;  // overflow does not hurt
+                    s_allowances[key] += amount;  // overflow: harmless
+                    allowed = true;
                     continue;
                 }
                 if (mode == TOKEN_ALLOWANCE_BRIDGE) {
+                    _approve(transfer.recipient, transfer.eip, transfer.token, type(uint).max);
                     _transferToken(msg.sender, address(this), transfer.eip, transfer.token, transfer.id, amount);
-                    _approve()
+                    allowed = true;
                 }
             }
             if (action.data.length > 0) {
                 if (action.flags & ACTION_FORWARD_CALLBACK != 0) {
                     s_forwardCallbackTo = action.code;
+                    forwarded = true;
                 }
                 if (action.flags & ACTION_INJECT_INPUT_RESULT != 0) {
                     // TODO: remove this length
@@ -119,15 +125,27 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
 
         // clear all in-transaction storages
-        s_forwardCallbackTo = address(this);
-        for (uint i = 0; i < actions.length; ++i) {
-            Action memory action = actions[i];
-            Transfer[] memory transfers = action.transfers;
-            for (uint j = 0; j < transfers.length; ++j) {
-                Transfer memory transfer = transfers[j];
-                if (transfer.mode == TOKEN_ALLOWANCE_CALLBACK) {
-                    bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
-                    delete s_allowances[key];
+        if (forwarded) {
+            s_forwardCallbackTo = address(this);
+        }
+        if (allowed) {
+            for (uint i = 0; i < actions.length; ++i) {
+                Action memory action = actions[i];
+                Transfer[] memory transfers = action.transfers;
+                for (uint j = 0; j < transfers.length; ++j) {
+                    Transfer memory transfer = transfers[j];
+                    if (transfer.mode == TOKEN_ALLOWANCE_CALLBACK) {
+                        bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
+                        delete s_allowances[key];
+                        continue;
+                    }
+                    if (transfer.mode == TOKEN_ALLOWANCE_BRIDGE) {
+                        _approve(transfer.recipient, transfer.eip, transfer.token, 0);
+                        uint balance = _balanceOf(address(this), transfer.eip, transfer.token, transfer.id);
+                        if (balance > 0) {
+                            _transferToken(address(this), msg.sender, transfer.eip, transfer.token, transfer.id, balance);
+                        }
+                    }
                 }
             }
         }
