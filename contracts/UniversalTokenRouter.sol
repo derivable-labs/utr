@@ -101,7 +101,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     forwarded = true;
                 }
                 if (action.flags & ACTION_INJECT_INPUT_RESULT != 0) {
-                    // TODO: remove this length
                     action.data = _concat(action.data, action.data.length, lastInputResult);
                 }
                 (bool success, bytes memory result) = action.code.call{value: value}(action.data);
@@ -291,7 +290,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         uint length,
         bytes memory postBytes
     ) internal pure returns (bytes memory bothBytes) {
-        // TODO: just use memory from 0x0
         assembly {
             // Get a location of some free memory and store it in bothBytes as
             // Solidity does for memory variables.
