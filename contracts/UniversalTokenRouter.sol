@@ -23,7 +23,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
 
     uint constant ID_721_ALL = uint(keccak256('UniversalTokenRouter.ID_721_ALL'));
 
-    uint constant ACTION_FAILABLE                   = 1;
+    uint constant ACTION_IGNORE_ERROR               = 1;
     uint constant ACTION_RECORD_INPUT_RESULT        = 2;
     uint constant ACTION_INJECT_INPUT_RESULT        = 4;
     uint constant ACTION_FORWARD_CALLBACK           = 8;
@@ -99,7 +99,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     action.data = _concat(action.data, action.data.length, lastInputResult);
                 }
                 (bool success, bytes memory result) = action.code.call{value: value}(action.data);
-                if (!success && action.flags & ACTION_FAILABLE == 0) {
+                if (!success && action.flags & ACTION_IGNORE_ERROR == 0) {
                     assembly {
                         revert(add(result,32),mload(result))
                     }
