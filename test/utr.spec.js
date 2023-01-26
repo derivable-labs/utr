@@ -21,13 +21,13 @@ const scenarios = [
 const TOKEN_SENDER_TRANSFER     = 0;
 const TOKEN_ROUTER_TRANSFER     = 1;
 const TOKEN_NEXT_CALL_VALUE     = 2;
-const TOKEN_ALLOWANCE_BRIDGE    = 4;
-const TOKEN_ALLOWANCE_CALLBACK  = 8;
+const TOKEN_ALLOWANCE_CALLBACK  = 0x100;
+const TOKEN_ALLOWANCE_BRIDGE    = 0x200;
 const AMOUNT_EXACT      = 0;
 const AMOUNT_ALL        = 1;
 const EIP_ETH           = 0;
 const ID_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ID_721_ALL"))
-const ACTION_FAILABLE                   = 1;
+const ACTION_IGNORE_ERROR               = 1;
 const ACTION_RECORD_INPUT_RESULT        = 2;
 const ACTION_INJECT_INPUT_RESULT        = 4;
 const ACTION_FORWARD_CALLBACK           = 8;
@@ -276,14 +276,12 @@ scenarios.forEach(function (scenario) {
                     id: 2,
                     amountOutMin: 2,
                     recipient: player,
-                }], [
-                    {
-                        transfers: [],
-                        flags: 0,
-                        code: gameItem.address,
-                        data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
-                    },
-                ])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+                }], [{
+                    transfers: [],
+                    flags: 0,
+                    code: gameItem.address,
+                    data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                }])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
                 await universalRouter.exec([{
                     eip: 721,
                     token: gameItem.address,
