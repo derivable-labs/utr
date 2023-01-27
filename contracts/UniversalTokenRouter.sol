@@ -28,7 +28,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant ACTION_INJECT_CALL_RESULT = 4;
     uint constant ACTION_FORWARD_CALLBACK   = 8;
 
-    // Storages: non-persistent
+    // Storages: non-persistent, in-transaction use only
     address internal s_forwardCallbackTo;
     mapping(bytes32 => uint) s_allowances;
 
@@ -89,6 +89,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     continue;
                 }
                 if (mode == ALLOWANCE_BRIDGE) {
+                    // TODO: can this be optimized for multiple ids cases?
                     _approve(input.recipient, input.eip, input.token, type(uint).max);
                     _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
                     allowed = true;
@@ -137,6 +138,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         continue;
                     }
                     if (input.mode == ALLOWANCE_BRIDGE) {
+                        // TODO: can this be optimized for multiple ids cases?
                         _approve(input.recipient, input.eip, input.token, 0);
                         uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
                         if (balance > 0) {
