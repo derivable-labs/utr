@@ -56,10 +56,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         bytes memory callResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
-            Input[] memory inputs = action.inputs;
             uint value;
-            for (uint j = 0; j < inputs.length; ++j) {
-                Input memory input = inputs[j];
+            for (uint j = 0; j < action.inputs.length; ++j) {
+                Input memory input = action.inputs[j];
                 uint mode = input.mode;
                 address sender = mode == TRANSFER_FROM_ROUTER ? address(this) : msg.sender; 
                 uint amount;
@@ -130,9 +129,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         if (allowed) {
             for (uint i = 0; i < actions.length; ++i) {
                 Action memory action = actions[i];
-                Input[] memory inputs = action.inputs;
-                for (uint j = 0; j < inputs.length; ++j) {
-                    Input memory input = inputs[j];
+                for (uint j = 0; j < action.inputs.length; ++j) {
+                    Input memory input = action.inputs[j];
                     if (input.mode == ALLOWANCE_CALLBACK) {
                         bytes32 key = keccak256(abi.encodePacked(msg.sender, input.recipient, input.eip, input.token, input.id));
                         delete s_allowances[key];
