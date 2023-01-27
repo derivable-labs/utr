@@ -191,6 +191,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     function transferTokens(
         Transfer[] calldata transfers
     ) external {
+    unchecked {
         for (uint i = 0; i < transfers.length; ++i) {
             transferToken(
                 transfers[i].sender,
@@ -201,7 +202,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 transfers[i].amount
             );
         }
-    }
+    } }
 
     function transferToken(
         address sender,
