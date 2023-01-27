@@ -9,7 +9,7 @@ struct Output {
     uint amountOutMin;
 }
 
-struct Transfer {
+struct Input {
     uint mode;
     address recipient;
     uint eip;           // token standard: 0 for ETH or EIP number
@@ -20,10 +20,19 @@ struct Transfer {
 }
 
 struct Action {
-    Transfer[] transfers;
+    Input[] inputs;
     uint flags;
     address code;       // contract code address
     bytes data;         // contract input data
+}
+
+struct Transfer {
+    address sender;
+    address recipient;
+    uint eip;
+    address token;
+    uint id;
+    uint amount;
 }
 
 interface IUniversalTokenRouter {
@@ -39,6 +48,10 @@ interface IUniversalTokenRouter {
         address token,
         uint id,
         uint amount
+    ) external;
+
+    function transferTokens(
+        Transfer[] calldata transfers
     ) external;
 }
 

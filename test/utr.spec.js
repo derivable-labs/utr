@@ -57,7 +57,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin,
                 }], [{
                     flags: 0,
-                    transfers: [{
+                    inputs: [{
                         mode: TRANSFER_FROM_SENDER,
                         recipient: uniswapPool.address,
                         eip: 20,
@@ -96,12 +96,12 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: amountOut,
                     recipient: to,
                 }], [{
-                    transfers: [],
+                    inputs: [],
                     flags: ACTION_RECORD_CALL_RESULT,
                     code: uniswapV2Helper01.address,
                     data: (await uniswapV2Helper01.populateTransaction.getAmountsIn(amountOut, path)).data,
                 }, {
-                    transfers: [{
+                    inputs: [{
                         mode: TRANSFER_FROM_SENDER,
                         eip: 20,
                         token: path[0],
@@ -136,7 +136,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: 1,  // just enough to verify the correct recipient
                     recipient: to,
                 }], [{
-                    transfers: [],
+                    inputs: [],
                     flags: ACTION_RECORD_CALL_RESULT,
                     code: uniswapV2Helper01.address,
                     data: (await uniswapV2Helper01.populateTransaction._addLiquidity(
@@ -148,7 +148,7 @@ scenarios.forEach(function (scenario) {
                         amountBMin,
                     )).data,
                 }, {
-                    transfers: [{
+                    inputs: [{
                         mode: TRANSFER_FROM_SENDER,
                         eip: 20,
                         token: tokenA,
@@ -181,7 +181,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: 1,
                     recipient: someRecipient,
                 }], [{
-                    transfers: [{
+                    inputs: [{
                         mode: TRANSFER_CALL_VALUE,
                         eip: 0, // ETH
                         token: AddressZero,
@@ -194,7 +194,7 @@ scenarios.forEach(function (scenario) {
                     code: weth.address,
                     data: (await weth.populateTransaction.deposit()).data,    // WETH.deposit returns WETH token to the UTR contract
                 }, {
-                    transfers: [{
+                    inputs: [{
                         mode: TRANSFER_FROM_ROUTER,
                         eip: 20,
                         token: weth.address,
@@ -222,7 +222,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: 1,
                     recipient: someRecipient,
                 }], [{
-                    transfers: [{
+                    inputs: [{
                         mode: TRANSFER_CALL_VALUE,
                         eip: 0,                 // ETH
                         token: AddressZero,
@@ -251,7 +251,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: 1,
                     recipient: player,
                 }], [{
-                    transfers: [],
+                    inputs: [],
                     flags: 0,
                     code: gameItem.address,
                     data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
@@ -264,7 +264,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: 1,
                     recipient: player,
                 }], [{
-                    transfers: [],
+                    inputs: [],
                     flags: 1,
                     code: gameItem.address,
                     data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
@@ -277,7 +277,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: 2,
                     recipient: player,
                 }], [{
-                    transfers: [],
+                    inputs: [],
                     flags: 0,
                     code: gameItem.address,
                     data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
@@ -289,7 +289,7 @@ scenarios.forEach(function (scenario) {
                     amountOutMin: 3,
                     recipient: player,
                 }], [{
-                    transfers: [],
+                    inputs: [],
                     flags: 0,
                     code: gameItem.address,
                     data: (await gameItem.populateTransaction.awardItems(amount, player, tokenURI)).data,

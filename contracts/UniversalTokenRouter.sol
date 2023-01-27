@@ -56,23 +56,23 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         bytes memory callResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
-            Transfer[] memory transfers = action.transfers;
+            Input[] memory inputs = action.inputs;
             uint value;
-            for (uint j = 0; j < transfers.length; ++j) {
-                Transfer memory transfer = transfers[j];
-                uint mode = transfer.mode;
+            for (uint j = 0; j < inputs.length; ++j) {
+                Input memory input = inputs[j];
+                uint mode = input.mode;
                 address sender = mode == TRANSFER_FROM_ROUTER ? address(this) : msg.sender; 
                 uint amount;
-                if (transfer.amountSource == AMOUNT_EXACT) {
-                    amount = transfer.amountInMax;
+                if (input.amountSource == AMOUNT_EXACT) {
+                    amount = input.amountInMax;
                 } else {
-                    if (transfer.amountSource == AMOUNT_ALL) {
-                        amount = _balanceOf(sender, transfer.eip, transfer.token, transfer.id);
+                    if (input.amountSource == AMOUNT_ALL) {
+                        amount = _balanceOf(sender, input.eip, input.token, input.id);
                     } else {
-                        amount = _sliceUint(callResult, transfer.amountSource);
+                        amount = _sliceUint(callResult, input.amountSource);
                     }
-                    if (amount > 0 && transfer.amountInMax > 0) {
-                        require(amount <= transfer.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
+                    if (amount > 0 && input.amountInMax > 0) {
+                        require(amount <= input.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                     }
                 }
                 if (mode == TRANSFER_CALL_VALUE) {
@@ -80,18 +80,18 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     continue;
                 }
                 if (mode == TRANSFER_FROM_SENDER || mode == TRANSFER_FROM_ROUTER) {
-                    _transferToken(sender, transfer.recipient, transfer.eip, transfer.token, transfer.id, amount);
+                    _transferToken(sender, input.recipient, input.eip, input.token, input.id, amount);
                     continue;
                 }
                 if (mode == ALLOWANCE_CALLBACK) {
-                    bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
+                    bytes32 key = keccak256(abi.encodePacked(msg.sender, input.recipient, input.eip, input.token, input.id));
                     s_allowances[key] += amount;  // overflow: harmless
                     allowed = true;
                     continue;
                 }
                 if (mode == ALLOWANCE_BRIDGE) {
-                    _approve(transfer.recipient, transfer.eip, transfer.token, type(uint).max);
-                    _transferToken(msg.sender, address(this), transfer.eip, transfer.token, transfer.id, amount);
+                    _approve(input.recipient, input.eip, input.token, type(uint).max);
+                    _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
                     allowed = true;
                 }
             }
@@ -130,19 +130,19 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         if (allowed) {
             for (uint i = 0; i < actions.length; ++i) {
                 Action memory action = actions[i];
-                Transfer[] memory transfers = action.transfers;
-                for (uint j = 0; j < transfers.length; ++j) {
-                    Transfer memory transfer = transfers[j];
-                    if (transfer.mode == ALLOWANCE_CALLBACK) {
-                        bytes32 key = keccak256(abi.encodePacked(msg.sender, transfer.recipient, transfer.eip, transfer.token, transfer.id));
+                Input[] memory inputs = action.inputs;
+                for (uint j = 0; j < inputs.length; ++j) {
+                    Input memory input = inputs[j];
+                    if (input.mode == ALLOWANCE_CALLBACK) {
+                        bytes32 key = keccak256(abi.encodePacked(msg.sender, input.recipient, input.eip, input.token, input.id));
                         delete s_allowances[key];
                         continue;
                     }
-                    if (transfer.mode == ALLOWANCE_BRIDGE) {
-                        _approve(transfer.recipient, transfer.eip, transfer.token, 0);
-                        uint balance = _balanceOf(address(this), transfer.eip, transfer.token, transfer.id);
+                    if (input.mode == ALLOWANCE_BRIDGE) {
+                        _approve(input.recipient, input.eip, input.token, 0);
+                        uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
                         if (balance > 0) {
-                            _transferToken(address(this), msg.sender, transfer.eip, transfer.token, transfer.id, balance);
+                            _transferToken(address(this), msg.sender, input.eip, input.token, input.id, balance);
                         }
                     }
                 }
@@ -190,6 +190,21 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     }
 
+    function transferTokens(
+        Transfer[] calldata transfers
+    ) external {
+        for (uint i = 0; i < transfers.length; ++i) {
+            transferToken(
+                transfers[i].sender,
+                transfers[i].recipient,
+                transfers[i].eip,
+                transfers[i].token,
+                transfers[i].id,
+                transfers[i].amount
+            );
+        }
+    }
+
     function transferToken(
         address sender,
         address recipient,
@@ -197,7 +212,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         address token,
         uint id,
         uint amount
-    ) external override {
+    ) public {
         // TODO: test gas for abi.encode
         bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
         require(s_allowances[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
