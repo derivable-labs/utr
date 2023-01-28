@@ -54,11 +54,3 @@ interface IUniversalTokenRouter {
         Transfer[] calldata transfers
     ) external;
 }
-
-interface IUTRCallback {
-    // 0x3696d736
-    function utrCallback(
-        address caller,
-        bytes memory data
-    ) external payable;
-}

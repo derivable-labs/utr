@@ -26,15 +26,12 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant ACTION_IGNORE_ERROR       = 1;
     uint constant ACTION_RECORD_CALL_RESULT = 2;
     uint constant ACTION_INJECT_CALL_RESULT = 4;
-    uint constant ACTION_FORWARD_CALLBACK   = 8;
 
     // Storages: non-persistent, in-transaction use only
-    address internal s_forwardCallbackTo;
     mapping(bytes32 => uint) s_allowances;
 
-    constructor() {
-        s_forwardCallbackTo = address(this);
-    }
+    // accepting ETH for WETH.withdraw
+    receive() external payable {}
 
     function exec(
         Output[] memory outputs,
@@ -50,7 +47,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             output.amountOutMin = expected;
         }
 
-        bool forwarded = false;
         bool allowed = false;
 
         bytes memory callResult;
@@ -96,10 +92,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 }
             }
             if (action.data.length > 0) {
-                if (action.flags & ACTION_FORWARD_CALLBACK != 0) {
-                    s_forwardCallbackTo = action.code;
-                    forwarded = true;
-                }
                 if (action.flags & ACTION_INJECT_CALL_RESULT != 0) {
                     action.data = _concat(action.data, action.data.length, callResult);
                 }
@@ -124,9 +116,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
 
         // clear all in-transaction storages
-        if (forwarded) {
-            s_forwardCallbackTo = address(this);
-        }
         if (allowed) {
             for (uint i = 0; i < actions.length; ++i) {
                 Action memory action = actions[i];
@@ -155,40 +144,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             TransferHelper.safeTransferETH(msg.sender, leftOver);
         }
     } }
-
-    // accepting ETH
-    receive() external payable {}
-
-    // forward callback to s_forwardCallbackTo
-    fallback() external payable {
-        address target = s_forwardCallbackTo;
-        require(target != address(this), 'UniversalTokenRouter: MISSING_ACTION_FORWARD_CALLBACK');
-        bytes memory data;
-        assembly {
-            calldatacopy(data, 0, calldatasize())
-        }
-        data = abi.encodeWithSelector(0x3696d736, msg.sender, data);
-        assembly {
-            // forward the callback
-            let success := call(gas(), target, callvalue(), data, mload(data), 0, 0)
-
-            // We take full control of memory in this inline assembly
-            // block because it will not return to Solidity code. We overwrite the
-            // Solidity scratch pad at memory position 0.
-
-            // Copy the returned data.
-            returndatacopy(0, 0, returndatasize())
-
-            switch success
-            // call returns 0 on error.
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
-        }
-    }
 
     function transferTokens(
         Transfer[] calldata transfers
