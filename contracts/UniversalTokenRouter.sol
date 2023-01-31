@@ -66,9 +66,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     } else {
                         amount = _sliceUint(callResult, input.amountSource);
                     }
-                    if (amount > 0 && input.amountInMax > 0) {
-                        require(amount <= input.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
-                    }
+                    require(amount <= input.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                 }
                 if (mode == TRANSFER_CALL_VALUE) {
                     value = amount;

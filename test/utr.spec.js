@@ -199,7 +199,7 @@ scenarios.forEach(function (scenario) {
                         eip: 20,
                         token: weth.address,
                         id: 0,
-                        amountInMax: 0,             // no limit
+                        amountInMax: 123,
                         amountSource: AMOUNT_ALL,   // entire WETH balance of this UTR contract
                         recipient: someRecipient,
                     }],
