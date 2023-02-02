@@ -124,7 +124,7 @@ contract SwapHelper is
             params.amountIn,
             params.recipient,
             params.sqrtPriceLimitX96,
-            SwapCallbackData({path: abi.encodePacked(params.tokenIn, params.fee, params.tokenOut), payer: msg.sender})
+            SwapCallbackData({path: abi.encodePacked(params.tokenIn, params.fee, params.tokenOut), payer: params.payer})
         );
         require(amountOut >= params.amountOutMinimum, 'Too little received');
     }
@@ -213,7 +213,7 @@ contract SwapHelper is
             params.amountOut,
             params.recipient,
             params.sqrtPriceLimitX96,
-            SwapCallbackData({path: abi.encodePacked(params.tokenOut, params.fee, params.tokenIn), payer: msg.sender})
+            SwapCallbackData({path: abi.encodePacked(params.tokenOut, params.fee, params.tokenIn), payer: params.payer})
         );
 
         require(amountIn <= params.amountInMaximum, 'Too much requested');

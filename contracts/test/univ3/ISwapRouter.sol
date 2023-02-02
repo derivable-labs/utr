@@ -8,6 +8,7 @@ import '@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.so
 /// @notice Functions for swapping tokens via Uniswap V3
 interface ISwapRouter is IUniswapV3SwapCallback {
     struct ExactInputSingleParams {
+        address payer;
         address tokenIn;
         address tokenOut;
         uint24 fee;
@@ -38,6 +39,7 @@ interface ISwapRouter is IUniswapV3SwapCallback {
     function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
 
     struct ExactOutputSingleParams {
+        address payer;
         address tokenIn;
         address tokenOut;
         uint24 fee;
