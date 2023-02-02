@@ -82,6 +82,93 @@ async function scenario01() {
     }
 }
 
+async function scenario02() {
+    // Contracts are deployed using the first signer/account by default
+    const [owner, otherAccount] = await ethers.getSigners();
+    console.log(await owner.getBalance())
+    const signer = owner;
+    // weth test
+    const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
+    const WETH = new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
+    // uniswap factory
+    const compiledUniswapFactory = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
+    const Uniswapv3Factory = new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
+    // uniswap router
+    const compiledUniswapv3Router = require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json");
+    const Uniswapv3Router = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer);
+    // uniswap position manager
+    const compiledUniswapv3PositionManager = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
+    const Uniswapv3PositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer);
+    // erc20 factory
+    const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
+    const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
+    // setup uniswap
+    const usdc = await erc20Factory.deploy(numberToWei(100000000));
+    const weth = await WETH.deploy();
+    const uniswapv3Factory = await Uniswapv3Factory.deploy();
+    const uniswapv3Router = await Uniswapv3Router.deploy(uniswapv3Factory.address, weth.address);
+    const uniswapv3PositionManager = await Uniswapv3PositionManager.deploy(uniswapv3Factory.address, weth.address, '0x0000000000000000000000000000000000000000')
+    await usdc.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
+    await weth.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
+
+    await uniswapv3PositionManager.createAndInitializePoolIfNecessary(
+        usdc.address,
+        weth.address,
+        3000,
+        bn('387298334621').mul(bn(2).pow(96)).div('10000000000')
+    )
+    console.log({
+        uniswapv3Router: uniswapv3Router.address,
+        // uniswapPool,
+        // uniswapV2Helper01,
+        usdc: usdc.address,
+        weth: weth.address,
+        owner: owner.address,
+        uniswapv3PositionManager: uniswapv3PositionManager.address
+    })
+    await uniswapv3PositionManager.mint({
+        token0: usdc.address,
+        token1: weth.address,
+        fee: 3000,
+        tickLower: Math.ceil(72445 / 60) * 60,
+        tickUpper: Math.floor(73781 / 60) * 60,
+        amount0Desired: '48044492550000000000000',
+        amount1Desired: '698696328365147790185',
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: owner.address,
+        deadline: new Date().getTime() + 100000
+    }, {
+        value: '698696328365147790185',
+        gasLimit: 30000000
+    })
+
+    // deploy UniversalRouter
+    const UniversalRouter = await ethers.getContractFactory("UniversalTokenRouter");
+    const universalRouter = await UniversalRouter.deploy();
+    await universalRouter.deployed();
+
+    // // deploy helper
+    // const UniswapV2Helper01 = await ethers.getContractFactory("UniswapV2Helper01");
+    // const uniswapV2Helper01 = await UniswapV2Helper01.deploy(
+    //     uniswapFactory.address,
+    //     weth.address
+    // );
+    // await uniswapV2Helper01.deployed();
+
+    return {
+        uniswapv3Router,
+        universalRouter,
+        // uniswapPool,
+        // uniswapV2Helper01,
+        usdc,
+        weth,
+        owner,
+        otherAccount
+    }
+}
+
 module.exports = {
-    scenario01
+    scenario01,
+    scenario02
 }
