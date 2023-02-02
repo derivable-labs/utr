@@ -235,7 +235,7 @@ contract SwapHelper is
             params.amountOut,
             params.recipient,
             0,
-            SwapCallbackData({path: params.path, payer: msg.sender})
+            SwapCallbackData({path: params.path, payer: params.payer})
         );
 
         amountIn = amountInCached;

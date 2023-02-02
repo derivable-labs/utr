@@ -67,6 +67,48 @@ scenarios.forEach(function (scenario) {
                     })).data,
                 }])
             });
+
+            it("UniswapV3Router.exactOutput", async function () {
+                const {usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner} = await loadFixture(scenario.fixture);
+                await weth.approve(universalRouter.address, MaxUint256);
+                await weth.deposit({ value: pe(1) });
+
+                console.log({
+                    universalRouter: universalRouter.address,
+                    poolAddress: poolAddress,
+                    owner: owner.address,
+                    usdc: usdc.address,
+                    weth: weth.address
+                })
+                
+                await universalRouter.exec([{
+                    eip: 20,
+                    token: usdc.address,
+                    id: 0,
+                    amountOutMin: 1,
+                    recipient: owner.address,
+                }], [{
+                    inputs: [{
+                        mode: ALLOWANCE_CALLBACK,
+                        eip: 20,
+                        token: weth.address,
+                        id: 0,
+                        amountSource: AMOUNT_EXACT,
+                        amountInMax: '1600',
+                        recipient: poolAddress,
+                    }],
+                    flags: 0,
+                    code: uniswapV3Helper.address,
+                    data: (await uniswapV3Helper.populateTransaction.exactOutput({
+                        payer: owner.address,
+                        path: encodePath([usdc.address, weth.address], [3000]),
+                        recipient: owner.address,
+                        deadline: new Date().getTime() + 100000,
+                        amountOut: '1',
+                        amountInMaximum: '1600',
+                    })).data,
+                }])
+            });
         });
     });
 });
