@@ -45,8 +45,8 @@ async function scenario01() {
 
     // deploy UniversalRouter
     const UniversalRouter = await ethers.getContractFactory("UniversalTokenRouter");
-    const universalRouter = await UniversalRouter.deploy();
-    await universalRouter.deployed();
+    const utr = await UniversalRouter.deploy();
+    await utr.deployed();
 
     // deploy helper
     const UniswapV2Helper01 = await ethers.getContractFactory("UniswapV2Helper01");
@@ -70,7 +70,7 @@ async function scenario01() {
 
     return {
         uniswapRouter,
-        universalRouter,
+        utr,
         uniswapPool,
         uniswapV2Helper01,
         wethAdapter,
@@ -136,15 +136,15 @@ async function scenario02() {
 
     // deploy UniversalRouter
     const UniversalRouter = await ethers.getContractFactory("UniversalTokenRouter");
-    const universalRouter = await UniversalRouter.deploy();
-    await universalRouter.deployed();
+    const utr = await UniversalRouter.deploy();
+    await utr.deployed();
 
     // deploy helper
     const UniswapV3Helper = await ethers.getContractFactory("SwapHelper");
     const uniswapV3Helper = await UniswapV3Helper.deploy(
         uniswapv3Factory.address,
         weth.address,
-        universalRouter.address
+        utr.address
     );
     await uniswapV3Helper.deployed();
 
@@ -152,7 +152,7 @@ async function scenario02() {
 
     return {
         uniswapv3Router,
-        universalRouter,
+        utr,
         uniswapV3Helper,
         usdc,
         weth,

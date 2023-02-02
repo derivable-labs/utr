@@ -33,9 +33,9 @@ const ACTION_INJECT_CALL_RESULT = 4;
 
 scenarios.forEach(function (scenario) {
     describe("Uniswap/v3: " + scenario.fixtureName, function () {
-        let usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner, uniswapv3PositionManager;
+        let usdc, weth, utr, uniswapV3Helper, poolAddress, owner, uniswapv3PositionManager;
         beforeEach("load fixture", async () => {
-            ({ usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner, uniswapv3PositionManager } = await loadFixture(scenario.fixture));
+            ({ usdc, weth, utr, uniswapV3Helper, poolAddress, owner, uniswapv3PositionManager } = await loadFixture(scenario.fixture));
         })
         function exactInputParams(tokenIn, tokenOut, amountIn, amountOutMin, payer = owner) {
             return {
@@ -48,10 +48,10 @@ scenarios.forEach(function (scenario) {
             }
         }
         it("weth -> usdc", async function () {
-            await weth.approve(universalRouter.address, MaxUint256);
+            await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(1) });
 
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: usdc.address,
                 id: 0,
@@ -74,7 +74,7 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }])
 
-            await expect(universalRouter.transferToken(
+            await expect(utr.transferToken(
                 owner.address,
                 poolAddress,
                 20,
@@ -85,7 +85,7 @@ scenarios.forEach(function (scenario) {
         });
 
         it("eth -> usdc", async function () {
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: usdc.address,
                 id: 0,
@@ -110,11 +110,11 @@ scenarios.forEach(function (scenario) {
                 value: 2345,
             })
 
-            expect(await ethers.provider.getBalance(universalRouter.address)).equal(0)
+            expect(await ethers.provider.getBalance(utr.address)).equal(0)
         });
 
         it("usdc -> eth multicall", async function () {
-            await usdc.approve(universalRouter.address, MaxUint256);
+            await usdc.approve(utr.address, MaxUint256);
             const params = {
                 payer: owner.address,
                 path: encodePath([usdc.address, weth.address], [3000]),
@@ -126,7 +126,7 @@ scenarios.forEach(function (scenario) {
 
             const data = [uniswapV3Helper.interface.encodeFunctionData('exactInput', [params])]
             data.push(uniswapV3Helper.interface.encodeFunctionData('unwrapWETH9', ['1000', owner.address]))
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 0,
                 token: AddressZero,
                 id: 0,
@@ -151,7 +151,7 @@ scenarios.forEach(function (scenario) {
         });
 
         it("insufficient input", async function () {
-            const request = universalRouter.exec([{
+            const request = utr.exec([{
                 eip: 20,
                 token: usdc.address,
                 id: 0,
@@ -179,7 +179,7 @@ scenarios.forEach(function (scenario) {
         });
 
         it("insufficient output", async function () {
-            const request = universalRouter.exec([{
+            const request = utr.exec([{
                 eip: 20,
                 token: usdc.address,
                 id: 0,
@@ -208,10 +208,10 @@ scenarios.forEach(function (scenario) {
 
 
         it("UniswapV3Router.exactInputSingle", async function () {
-            await weth.approve(universalRouter.address, MaxUint256);
+            await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(1) });
 
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: usdc.address,
                 id: 0,
@@ -246,10 +246,10 @@ scenarios.forEach(function (scenario) {
         });
 
         it("UniswapV3Router.exactOutput", async function () {
-            await weth.approve(universalRouter.address, MaxUint256);
+            await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(1) });
 
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: usdc.address,
                 id: 0,
@@ -279,10 +279,10 @@ scenarios.forEach(function (scenario) {
         });
 
         it("UniswapV3Router.exactOutputSingle", async function () {
-            await weth.approve(universalRouter.address, MaxUint256);
+            await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(1) });
 
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: usdc.address,
                 id: 0,
@@ -317,10 +317,10 @@ scenarios.forEach(function (scenario) {
         });
 
         it("PositionManager.mint: ALLOWANCE_BRIDGE", async function () {
-            await usdc.approve(universalRouter.address, MaxUint256);
+            await usdc.approve(utr.address, MaxUint256);
 
             // Mint
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 721,
                 token: uniswapv3PositionManager.address,
                 id: 2,
@@ -364,7 +364,7 @@ scenarios.forEach(function (scenario) {
             })
 
             //Add liquidity
-            await universalRouter.exec([], [{
+            await utr.exec([], [{
                 inputs: [{
                     mode: ALLOWANCE_BRIDGE,
                     eip: 20,
@@ -397,8 +397,8 @@ scenarios.forEach(function (scenario) {
                 value: '2000'
             })
 
-            expect(await usdc.balanceOf(universalRouter.address)).equal(0)
-            expect(await usdc.allowance(universalRouter.address, uniswapv3PositionManager.address)).equal(0)
+            expect(await usdc.balanceOf(utr.address)).equal(0)
+            expect(await usdc.allowance(utr.address, uniswapv3PositionManager.address)).equal(0)
 
             const { liquidity } = await uniswapv3PositionManager.positions(2)
 

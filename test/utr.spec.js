@@ -34,8 +34,8 @@ const ACTION_INJECT_CALL_RESULT = 4;
 scenarios.forEach(function (scenario) {
     describe("Generic: " + scenario.fixtureName, function () {
         it("UniswapRouter.swapExactTokensForTokens", async function () {
-            const { universalRouter, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
-            await weth.approve(universalRouter.address, MaxUint256);
+            const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
+            await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(100) });
 
             const amountIn = pe(1);
@@ -47,7 +47,7 @@ scenarios.forEach(function (scenario) {
             const to = owner.address
             const deadline = MaxUint256
 
-            await universalRouter.exec([{
+            await utr.exec([{
                 recipient: to,
                 eip: 20,
                 token: path[path.length - 1],
@@ -75,8 +75,8 @@ scenarios.forEach(function (scenario) {
             }]);
         });
         it("UniswapRouter.swapTokensForExactTokens", async function () {
-            const { universalRouter, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
-            await weth.approve(universalRouter.address, MaxUint256);
+            const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
+            await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(100) });
 
             const amountOut = pe(1400);
@@ -87,7 +87,7 @@ scenarios.forEach(function (scenario) {
             const amountInMax = pe(1);
             const to = owner.address;
 
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: path[path.length - 1],
                 id: 0,
@@ -114,10 +114,10 @@ scenarios.forEach(function (scenario) {
             }]);
         });
         it("UniswapRouter.addLiquidity", async function () {
-            const { universalRouter, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
-            await weth.approve(universalRouter.address, MaxUint256);
+            const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
+            await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(100) });
-            await busd.approve(universalRouter.address, MaxUint256);
+            await busd.approve(utr.address, MaxUint256);
 
             const tokenA = busd.address;
             const tokenB = weth.address;
@@ -127,7 +127,7 @@ scenarios.forEach(function (scenario) {
             const amountBMin = pe(0);
             const to = owner.address;
 
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: uniswapPool.address,
                 id: 0,
@@ -169,10 +169,10 @@ scenarios.forEach(function (scenario) {
             }]);
         });
         it("Deposit WETH and transfer them out", async function () {
-            const { universalRouter, weth, otherAccount } = await loadFixture(scenario.fixture);
+            const { utr, weth, otherAccount } = await loadFixture(scenario.fixture);
             const someRecipient = otherAccount.address;
             // sample code to deposit WETH and transfer them out
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: weth.address,
                 id: 0,
@@ -209,11 +209,11 @@ scenarios.forEach(function (scenario) {
             expect(await weth.balanceOf(someRecipient)).to.equal(123);
         });
         it("Adapter contract for WETH", async function () {
-            const { universalRouter, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
-            await weth.approve(universalRouter.address, MaxUint256);
+            const { utr, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
+            await weth.approve(utr.address, MaxUint256);
             await weth.approve(wethAdapter.address, MaxUint256);
             const someRecipient = otherAccount.address;
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 20,
                 token: weth.address,
                 id: 0,
@@ -237,12 +237,12 @@ scenarios.forEach(function (scenario) {
             ], { value: 123 });
         });
         it("Output Token Verification - EIP-721", async function () {
-            const { universalRouter, gameItem, owner } = await loadFixture(scenario.fixture);
-            await gameItem.setApprovalForAll(universalRouter.address, true);
+            const { utr, gameItem, owner } = await loadFixture(scenario.fixture);
+            await gameItem.setApprovalForAll(utr.address, true);
             const tokenURI = "https://game.example/item.json";
             const player = owner.address;
             const amount = 3;
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 721,
                 token: gameItem.address,
                 id: 0,
@@ -255,7 +255,7 @@ scenarios.forEach(function (scenario) {
                 data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
             expect(await gameItem.ownerOf(0)).to.equal(player);
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 721,
                 token: gameItem.address,
                 id: 1,
@@ -268,7 +268,7 @@ scenarios.forEach(function (scenario) {
                 data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
             expect(await gameItem.ownerOf(1)).to.equal(player);
-            await expect(universalRouter.exec([{
+            await expect(utr.exec([{
                 eip: 721,
                 token: gameItem.address,
                 id: 2,
@@ -280,7 +280,7 @@ scenarios.forEach(function (scenario) {
                 code: gameItem.address,
                 data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
             }])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
-            await universalRouter.exec([{
+            await utr.exec([{
                 eip: 721,
                 token: gameItem.address,
                 id: ID_721_ALL,
