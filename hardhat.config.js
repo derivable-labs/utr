@@ -12,7 +12,7 @@ const DEFAULT_COMPILER_SETTINGS = {
         evmVersion: 'istanbul',
         optimizer: {
             enabled: true,
-            runs: 1_000_000,
+            runs: 4294967295,
         },
         metadata: {
             bytecodeHash: 'none',
@@ -48,7 +48,7 @@ module.exports = {
                     evmVersion: 'istanbul',
                     optimizer: {
                         enabled: true,
-                        runs: 1_000_000,
+                        runs: 4294967295,
                     },
                     metadata: {
                         bytecodeHash: 'none',
