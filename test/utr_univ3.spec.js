@@ -38,20 +38,12 @@ scenarios.forEach(function (scenario) {
                 const {usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner} = await loadFixture(scenario.fixture);
                 await weth.approve(universalRouter.address, MaxUint256);
                 await weth.deposit({ value: pe(1) });
-
-                // await uniswapV3Helper.exactInput({
-                //     path: encodePath([weth.address, usdc.address], [3000]),
-                //     recipient: owner.address,
-                //     deadline: new Date().getTime() + 100000,
-                //     amountIn: '1000',
-                //     amountOutMinimum: 0,
-                // })
                 
                 await universalRouter.exec([{
                     eip: 20,
                     token: usdc.address,
                     id: 0,
-                    amountOutMin: 1,  // expect one more liquidity NFT 
+                    amountOutMin: 0,
                     recipient: owner.address,
                 }], [{
                     inputs: [{
@@ -60,21 +52,20 @@ scenarios.forEach(function (scenario) {
                         token: weth.address,
                         id: 0,
                         amountSource: AMOUNT_EXACT,
-                        amountInMax: '1000000000000000',
+                        amountInMax: '1000',
                         recipient: poolAddress,
                     }],
                     flags: 0,
                     code: uniswapV3Helper.address,
                     data: (await uniswapV3Helper.populateTransaction.exactInput({
+                        payer: owner.address,
                         path: encodePath([weth.address, usdc.address], [3000]),
                         recipient: owner.address,
                         deadline: new Date().getTime() + 100000,
                         amountIn: '1000',
                         amountOutMinimum: 0,
                     })).data,
-                }], {
-                    value: '698696328365147790185'
-                })
+                }])
             });
         });
     });

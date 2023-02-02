@@ -6,7 +6,6 @@ import '@uniswap/v3-core/contracts/libraries/SafeCast.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/base/PeripheryImmutableState.sol';
 import '@uniswap/v3-periphery/contracts/base/PeripheryValidation.sol';
 import '@uniswap/v3-periphery/contracts/base/Multicall.sol';
@@ -16,6 +15,7 @@ import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import './IUniversalTokenRouter.sol';
 import './IWETH9.sol';
 import './TransferHelper.sol';
+import './ISwapRouter.sol';
 
 /// @title Uniswap V3 Swap Router
 /// @notice Router for stateless execution of swaps against Uniswap V3
@@ -137,7 +137,7 @@ contract SwapHelper is
         checkDeadline(params.deadline)
         returns (uint256 amountOut)
     {
-        address payer = msg.sender; // msg.sender pays for the first hop
+        address payer = params.payer; // msg.sender pays for the first hop
 
         while (true) {
             bool hasMultiplePools = params.path.hasMultiplePools();
