@@ -85,7 +85,6 @@ async function scenario01() {
 async function scenario02() {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await ethers.getSigners();
-    console.log(await owner.getBalance())
     const signer = owner;
     // weth test
     const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
@@ -108,7 +107,6 @@ async function scenario02() {
     const uniswapv3Factory = await Uniswapv3Factory.deploy();
     const uniswapv3Router = await Uniswapv3Router.deploy(uniswapv3Factory.address, weth.address);
     const uniswapv3PositionManager = await Uniswapv3PositionManager.deploy(uniswapv3Factory.address, weth.address, '0x0000000000000000000000000000000000000000')
-    console.log(12312312, usdc.address.toLowerCase() < weth.address.toLowerCase())
     
     await usdc.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
     await weth.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
@@ -160,7 +158,8 @@ async function scenario02() {
         weth,
         owner,
         otherAccount,
-        poolAddress
+        poolAddress,
+        uniswapv3PositionManager
     }
 }
 

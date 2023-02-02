@@ -34,9 +34,9 @@ const ACTION_INJECT_CALL_RESULT = 4;
 scenarios.forEach(function (scenario) {
     describe("Pool Info: " + scenario.fixtureName, function () {
         describe("Usage Samples", function () {
-            let usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner;
+            let usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner, uniswapv3PositionManager;
             beforeEach("load fixture", async () => {
-                ({usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner} = await loadFixture(scenario.fixture));
+                ({usdc, weth, universalRouter, uniswapV3Helper, poolAddress, owner, uniswapv3PositionManager} = await loadFixture(scenario.fixture));
             })
             describe("UniswapV3Router.exactInput", function() {
                 function exactInputParams(tokenIn, tokenOut, amountIn, amountOutMin, payer = owner) {
@@ -105,7 +105,6 @@ scenarios.forEach(function (scenario) {
                 });
 
                 it("usdc -> eth multicall", async function () {
-                    console.log('WETH', weth.address)
                     await usdc.approve(universalRouter.address, MaxUint256);
                     const params = {
                         payer: owner.address,
@@ -307,6 +306,88 @@ scenarios.forEach(function (scenario) {
                         amountInMaximum: '1600',
                     })).data,
                 }])
+            });
+
+            it("PositionManager.mint", async function () {
+                await usdc.approve(universalRouter.address, MaxUint256);
+                
+                // Mint
+                await universalRouter.exec([{
+                    eip: 721,
+                    token: uniswapv3PositionManager.address,
+                    id: 2,
+                    amountOutMin: 1,
+                    recipient: owner.address,
+                }], [{
+                    inputs: [{
+                        mode: ALLOWANCE_BRIDGE,
+                        eip: 20,
+                        token: usdc.address,
+                        id: 0,
+                        amountSource: AMOUNT_EXACT,
+                        amountInMax: '2000',
+                        recipient: uniswapv3PositionManager.address,
+                    }, {
+                        mode: TRANSFER_CALL_VALUE,
+                        eip: 0, // ETH
+                        token: AddressZero,
+                        id: 0,
+                        amountInMax: '2000',
+                        amountSource: AMOUNT_EXACT,
+                        recipient: AddressZero, // pass it as the value for the next output action
+                    }],
+                    flags: 0,
+                    code: uniswapv3PositionManager.address,
+                    data: (await uniswapv3PositionManager.populateTransaction.mint({
+                        token0: usdc.address,
+                        token1: weth.address,
+                        fee: 3000,
+                        tickLower: Math.ceil(-800000 / 60) * 60,
+                        tickUpper: Math.floor(800000 / 60) * 60,
+                        amount0Desired: '2000',
+                        amount1Desired: '2000',
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        recipient: owner.address,
+                        deadline: new Date().getTime() + 100000
+                    })).data,
+                }], {
+                    value: '2000'
+                })
+
+                //Add liquidity
+                await universalRouter.exec([], [{
+                    inputs: [{
+                        mode: ALLOWANCE_BRIDGE,
+                        eip: 20,
+                        token: usdc.address,
+                        id: 0,
+                        amountSource: AMOUNT_EXACT,
+                        amountInMax: '2000',
+                        recipient: uniswapv3PositionManager.address,
+                    }, {
+                        mode: TRANSFER_CALL_VALUE,
+                        eip: 0, // ETH
+                        token: AddressZero,
+                        id: 0,
+                        amountInMax: '2000',
+                        amountSource: AMOUNT_EXACT,
+                        recipient: AddressZero, // pass it as the value for the next output action
+                    }],
+                    flags: 0,
+                    code: uniswapv3PositionManager.address,
+                    data: (await uniswapv3PositionManager.populateTransaction.increaseLiquidity({
+                        tokenId: 2,
+                        amount0Desired: '2000',
+                        amount1Desired: '2000',
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        recipient: owner.address,
+                        deadline: new Date().getTime() + 100000
+                    })).data,
+                }], {
+                    value: '2000'
+                })
             });
         });
     });
