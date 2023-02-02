@@ -108,6 +108,8 @@ async function scenario02() {
     const uniswapv3Factory = await Uniswapv3Factory.deploy();
     const uniswapv3Router = await Uniswapv3Router.deploy(uniswapv3Factory.address, weth.address);
     const uniswapv3PositionManager = await Uniswapv3PositionManager.deploy(uniswapv3Factory.address, weth.address, '0x0000000000000000000000000000000000000000')
+    console.log(12312312, usdc.address.toLowerCase() < weth.address.toLowerCase())
+    
     await usdc.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
     await weth.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
 
@@ -115,22 +117,22 @@ async function scenario02() {
         usdc.address,
         weth.address,
         3000,
-        bn('387298334621').mul(bn(2).pow(96)).div('10000000000')
+        bn('10000000000').mul(bn(2).pow(96)).div('10000000000')
     )
     await uniswapv3PositionManager.mint({
         token0: usdc.address,
         token1: weth.address,
         fee: 3000,
-        tickLower: Math.ceil(72445 / 60) * 60,
-        tickUpper: Math.floor(73781 / 60) * 60,
-        amount0Desired: '48044492550000000000000',
-        amount1Desired: '698696328365147790185',
+        tickLower: Math.ceil(-887272 / 60) * 60,
+        tickUpper: Math.floor(887272 / 60) * 60,
+        amount0Desired: '100000000000000000000',
+        amount1Desired: '100000000000000000000',
         amount0Min: 0,
         amount1Min: 0,
         recipient: owner.address,
         deadline: new Date().getTime() + 100000
     }, {
-        value: '698696328365147790185',
+        value: '100000000000000000000',
         gasLimit: 30000000
     })
 

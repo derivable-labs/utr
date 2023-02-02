@@ -243,6 +243,15 @@ contract SwapHelper is
         amountInCached = DEFAULT_AMOUNT_IN_CACHED;
     }
 
+    function unwrapWETH9(uint256 amountMinimum, address recipient) public payable {
+        uint256 balanceWETH9 = IWETH9(WETH9).balanceOf(address(this));
+        require(balanceWETH9 >= amountMinimum, 'Insufficient WETH9');
+        if (balanceWETH9 > 0) {
+            IWETH9(WETH9).withdraw(balanceWETH9);
+            TransferHelper.safeTransferETH(recipient, balanceWETH9);
+        }
+    }
+
     /// @param token The token to pay
     /// @param payer The entity that must pay
     /// @param recipient The entity that will receive payment
@@ -271,5 +280,9 @@ contract SwapHelper is
                 value
             );
         }
+    }
+
+    receive() external payable {
+        require(msg.sender == WETH9, 'Not WETH9');
     }
 }

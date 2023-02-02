@@ -104,6 +104,44 @@ scenarios.forEach(function (scenario) {
                     })
                 });
 
+                it("usdc -> eth multicall", async function () {
+                    console.log('WETH', weth.address)
+                    await usdc.approve(universalRouter.address, MaxUint256);
+                    const params = {
+                        payer: owner.address,
+                        path: encodePath([usdc.address, weth.address], [3000]),
+                        recipient: AddressZero,
+                        deadline: new Date().getTime() + 100000,
+                        amountIn: '1600',
+                        amountOutMinimum: '1',
+                    }
+
+                    const data = [uniswapV3Helper.interface.encodeFunctionData('exactInput', [params])]
+                    data.push(uniswapV3Helper.interface.encodeFunctionData('unwrapWETH9', ['1000', owner.address]))
+                    await universalRouter.exec([{
+                        eip: 0,
+                        token: AddressZero,
+                        id: 0,
+                        amountOutMin: 0,
+                        recipient: owner.address,
+                    }], [{
+                        inputs: [{
+                            mode: ALLOWANCE_CALLBACK,
+                            eip: 20,
+                            token: usdc.address,
+                            id: 0,
+                            amountInMax: '2000',
+                            amountSource: AMOUNT_EXACT,
+                            recipient: poolAddress, // pass it as the value for the next output action
+                        }],
+                        flags: 0,
+                        code: uniswapV3Helper.address,
+                        data: (await uniswapV3Helper.populateTransaction.multicall(
+                            data
+                        )).data,
+                    }])
+                });
+
                 it("insufficient input", async function () {
                     const request = universalRouter.exec([{
                         eip: 20,
@@ -137,7 +175,7 @@ scenarios.forEach(function (scenario) {
                         eip: 20,
                         token: usdc.address,
                         id: 0,
-                        amountOutMin: 10,
+                        amountOutMin: 2100,
                         recipient: owner.address,
                     }], [{
                         inputs: [{
