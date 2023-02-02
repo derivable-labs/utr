@@ -83,7 +83,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     continue;
                 }
                 if (mode == ALLOWANCE_BRIDGE) {
-                    // TODO: can this be optimized for multiple ids cases?
                     _approve(input.recipient, input.eip, input.token, type(uint).max);
                     _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
                     allowed = true;
@@ -125,7 +124,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         continue;
                     }
                     if (input.mode == ALLOWANCE_BRIDGE) {
-                        // TODO: can this be optimized for multiple ids cases?
                         _approve(input.recipient, input.eip, input.token, 0);
                         uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
                         if (balance > 0) {
@@ -167,7 +165,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         uint id,
         uint amount
     ) public {
-        // TODO: test gas for abi.encode
         bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
         require(s_allowances[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
         s_allowances[key] -= amount;
