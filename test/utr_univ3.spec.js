@@ -388,6 +388,28 @@ scenarios.forEach(function (scenario) {
                 }], {
                     value: '2000'
                 })
+
+                const {liquidity} = await uniswapv3PositionManager.positions(2)
+                
+                // Decrease Liquidity
+                await uniswapv3PositionManager.decreaseLiquidity({
+                    tokenId: 2,
+                    liquidity,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: new Date().getTime() + 100000
+                })
+
+                // Sweep tokens
+                await uniswapv3PositionManager.collect({
+                    tokenId: 2,
+                    recipient: owner.address,
+                    amount0Max: '1000000000000000',
+                    amount1Max: '1000000000000000',
+                })
+
+                // Burn NFT
+                await uniswapv3PositionManager.burn(2)
             });
         });
     });
