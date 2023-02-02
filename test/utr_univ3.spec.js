@@ -73,6 +73,15 @@ scenarios.forEach(function (scenario) {
                     exactInputParams(weth, usdc, '2000', 0)
                 )).data,
             }])
+
+            await expect(universalRouter.transferToken(
+                owner.address,
+                poolAddress,
+                20,
+                weth.address,
+                0,
+                1,
+            )).revertedWith('INSUFFICIENT_ALLOWANCE')
         });
 
         it("eth -> usdc", async function () {
@@ -98,8 +107,10 @@ scenarios.forEach(function (scenario) {
                     exactInputParams(weth, usdc, '2000', 0)
                 )).data,
             }], {
-                value: '2000'
+                value: 2345,
             })
+
+            expect(await ethers.provider.getBalance(universalRouter.address)).equal(0)
         });
 
         it("usdc -> eth multicall", async function () {
@@ -385,6 +396,9 @@ scenarios.forEach(function (scenario) {
             }], {
                 value: '2000'
             })
+
+            expect(await usdc.balanceOf(universalRouter.address)).equal(0)
+            expect(await usdc.allowance(universalRouter.address, uniswapv3PositionManager.address)).equal(0)
 
             const { liquidity } = await uniswapv3PositionManager.positions(2)
 
