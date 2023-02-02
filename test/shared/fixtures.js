@@ -117,15 +117,6 @@ async function scenario02() {
         3000,
         bn('387298334621').mul(bn(2).pow(96)).div('10000000000')
     )
-    console.log({
-        uniswapv3Router: uniswapv3Router.address,
-        // uniswapPool,
-        // uniswapV2Helper01,
-        usdc: usdc.address,
-        weth: weth.address,
-        owner: owner.address,
-        uniswapv3PositionManager: uniswapv3PositionManager.address
-    })
     await uniswapv3PositionManager.mint({
         token0: usdc.address,
         token1: weth.address,
@@ -148,23 +139,26 @@ async function scenario02() {
     const universalRouter = await UniversalRouter.deploy();
     await universalRouter.deployed();
 
-    // // deploy helper
-    // const UniswapV2Helper01 = await ethers.getContractFactory("UniswapV2Helper01");
-    // const uniswapV2Helper01 = await UniswapV2Helper01.deploy(
-    //     uniswapFactory.address,
-    //     weth.address
-    // );
-    // await uniswapV2Helper01.deployed();
+    // deploy helper
+    const UniswapV3Helper = await ethers.getContractFactory("SwapHelper");
+    const uniswapV3Helper = await UniswapV3Helper.deploy(
+        uniswapv3Factory.address,
+        weth.address,
+        universalRouter.address
+    );
+    await uniswapV3Helper.deployed();
+
+    const poolAddress = await uniswapv3Factory.getPool(usdc.address, weth.address, 3000);
 
     return {
         uniswapv3Router,
         universalRouter,
-        // uniswapPool,
-        // uniswapV2Helper01,
+        uniswapV3Helper,
         usdc,
         weth,
         owner,
-        otherAccount
+        otherAccount,
+        poolAddress
     }
 }
 
