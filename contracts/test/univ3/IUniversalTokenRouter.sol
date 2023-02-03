@@ -27,31 +27,18 @@ struct Action {
     bytes data;         // contract input data
 }
 
-struct Transfer {
-    address sender;
-    address recipient;
-    uint eip;
-    address token;
-    uint id;
-    uint amount;
-}
-
 interface IUniversalTokenRouter {
     function exec(
         Output[] memory outputs,
         Action[] memory actions
     ) external payable;
 
-    function transferToken(
+    function pay(
         address sender,
         address recipient,
         uint eip,
         address token,
         uint id,
         uint amount
-    ) external;
-
-    function transferTokens(
-        Transfer[] calldata transfers
     ) external;
 }

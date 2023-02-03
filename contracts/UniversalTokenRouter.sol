@@ -9,12 +9,12 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant TRANSFER_FROM_SENDER  = 0x0;
-    uint constant TRANSFER_FROM_ROUTER  = 0x1;
-    uint constant TRANSFER_CALL_VALUE   = 0x2;
-
-    uint constant ALLOWANCE_CALLBACK  = 0x100;
-    uint constant ALLOWANCE_BRIDGE    = 0x200;
+    // values with a single 1-bit are preferred
+    uint constant TRANSFER_FROM_SENDER  = 0;
+    uint constant TRANSFER_FROM_ROUTER  = 1;
+    uint constant TRANSFER_CALL_VALUE   = 2;
+    uint constant IN_TX_PAYMENT         = 4;
+    uint constant ALLOWANCE_BRIDGE      = 8;
 
     uint constant AMOUNT_EXACT      = 0;
     uint constant AMOUNT_ALL        = 1;
@@ -27,8 +27,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant ACTION_RECORD_CALL_RESULT = 2;
     uint constant ACTION_INJECT_CALL_RESULT = 4;
 
-    // Storages: non-persistent, in-transaction use only
-    mapping(bytes32 => uint) s_allowances;
+    // non-persistent in-transaction pending payments
+    mapping(bytes32 => uint) s_payments;
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
@@ -47,7 +47,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             output.amountOutMin = expected;
         }
 
-        bool allowed = false;
+        bool dirty = false;
 
         bytes memory callResult;
         for (uint i = 0; i < actions.length; ++i) {
@@ -76,16 +76,16 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     _transferToken(sender, input.recipient, input.eip, input.token, input.id, amount);
                     continue;
                 }
-                if (mode == ALLOWANCE_CALLBACK) {
+                if (mode == IN_TX_PAYMENT) {
                     bytes32 key = keccak256(abi.encodePacked(msg.sender, input.recipient, input.eip, input.token, input.id));
-                    s_allowances[key] += amount;  // overflow: harmless
-                    allowed = true;
+                    s_payments[key] += amount;  // overflow: harmless
+                    dirty = true;
                     continue;
                 }
                 if (mode == ALLOWANCE_BRIDGE) {
                     _approve(input.recipient, input.eip, input.token, type(uint).max);
                     _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
-                    allowed = true;
+                    dirty = true;
                 }
             }
             if (action.data.length > 0) {
@@ -113,14 +113,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
 
         // clear all in-transaction storages
-        if (allowed) {
+        if (dirty) {
             for (uint i = 0; i < actions.length; ++i) {
                 Action memory action = actions[i];
                 for (uint j = 0; j < action.inputs.length; ++j) {
                     Input memory input = action.inputs[j];
-                    if (input.mode == ALLOWANCE_CALLBACK) {
+                    if (input.mode == IN_TX_PAYMENT) {
                         bytes32 key = keccak256(abi.encodePacked(msg.sender, input.recipient, input.eip, input.token, input.id));
-                        delete s_allowances[key];
+                        delete s_payments[key];
                         continue;
                     }
                     if (input.mode == ALLOWANCE_BRIDGE) {
@@ -141,23 +141,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
-    function transferTokens(
-        Transfer[] calldata transfers
-    ) external {
-    unchecked {
-        for (uint i = 0; i < transfers.length; ++i) {
-            transferToken(
-                transfers[i].sender,
-                transfers[i].recipient,
-                transfers[i].eip,
-                transfers[i].token,
-                transfers[i].id,
-                transfers[i].amount
-            );
-        }
-    } }
-
-    function transferToken(
+    function pay(
         address sender,
         address recipient,
         uint eip,
@@ -165,11 +149,12 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         uint id,
         uint amount
     ) public {
+    unchecked {
         bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
-        require(s_allowances[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
-        s_allowances[key] -= amount;
+        require(s_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
+        s_payments[key] -= amount;
         _transferToken(sender, recipient, eip, token, id, amount);
-    }
+    } }
 
     function _transferToken(
         address sender,

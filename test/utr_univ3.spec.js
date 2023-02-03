@@ -21,8 +21,8 @@ const scenarios = [
 const TRANSFER_FROM_SENDER = 0;
 const TRANSFER_FROM_ROUTER = 1;
 const TRANSFER_CALL_VALUE = 2;
-const ALLOWANCE_CALLBACK = 0x100;
-const ALLOWANCE_BRIDGE = 0x200;
+const IN_TX_PAYMENT = 4;
+const ALLOWANCE_BRIDGE = 8;
 const AMOUNT_EXACT = 0;
 const AMOUNT_ALL = 1;
 const EIP_ETH = 0;
@@ -59,7 +59,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: ALLOWANCE_CALLBACK,
+                    mode: IN_TX_PAYMENT,
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -74,7 +74,7 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }])
 
-            await expect(utr.transferToken(
+            await expect(utr.pay(
                 owner.address,
                 poolAddress,
                 20,
@@ -134,7 +134,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: ALLOWANCE_CALLBACK,
+                    mode: IN_TX_PAYMENT,
                     eip: 20,
                     token: usdc.address,
                     id: 0,
@@ -219,7 +219,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: ALLOWANCE_CALLBACK,
+                    mode: IN_TX_PAYMENT,
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -257,7 +257,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: ALLOWANCE_CALLBACK,
+                    mode: IN_TX_PAYMENT,
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -290,7 +290,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: ALLOWANCE_CALLBACK,
+                    mode: IN_TX_PAYMENT,
                     eip: 20,
                     token: weth.address,
                     id: 0,

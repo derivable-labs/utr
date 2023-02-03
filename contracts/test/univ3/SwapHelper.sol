@@ -271,7 +271,7 @@ contract SwapHelper is
             TransferHelper.safeTransfer(token, recipient, value);
         } else {
             // pull payment
-            UTR.transferToken(
+            UTR.pay(
                 payer,
                 recipient,
                 20,     // EIP
