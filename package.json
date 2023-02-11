@@ -9,6 +9,7 @@
     "compile": "hardhat compile",
     "build": "hardhat compile && cp artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json build/",
     "test": "hardhat test",
+    "verify": "forge verify-contract 0x6120e8AA7711e19936826665a9E718b438AF6120 contracts/UniversalTokenRouter.sol:UniversalTokenRouter --compiler-version=0.8.13 --watch",
     "testnet": "hardhat run --network testnet",
     "mainnet": "hardhat run --network mainnet"
   },
