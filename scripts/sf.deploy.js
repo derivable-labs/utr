@@ -1,26 +1,29 @@
 const hre = require("hardhat");
+const ethers = hre.ethers
 require('dotenv').config();
 
 const opts = {
-    gasLimit: 30000000
+    gasLimit: 3000000
 };
 async function main() {
-    const initCodeUTR = require('../build/UniversalTokenRouter.json').bytecode;
-    const salt = 0;
-    const saltHash = ethers.utils.keccak256(salt);
+    const initCodeUTR = require('../artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json').bytecode;
+    const salt = 13
+    const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
     const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json');
     // mainnet
     const url = "https://bsc-dataseed.binance.org/"
     // Connect to the network
-    const provider = new hre.ethers.providers.JsonRpcProvider(url);
+    const provider = new ethers.providers.JsonRpcProvider(url);
     const singletonFactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
-    const contract = new hre.ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider);
-    const wallet = new hre.ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
+    const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider);
+    const wallet = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
     const contractWithSigner = contract.connect(wallet);
 
     try {
-        const deployTx = await contractWithSigner.deploy(initCodeUTR, saltHash, opts);
-        console.log("Result of deploy: ", deployTx);
+        const deployTx = await contractWithSigner.deploy(initCodeUTR, saltHex, opts);
+        console.log("Tx: ", deployTx.hash);
+        const res = await deployTx.wait(1)
+        console.log("Result: ", res)
     } catch (error) {
         console.log("Error: ", error)
     }
