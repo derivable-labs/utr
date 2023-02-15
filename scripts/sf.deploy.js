@@ -7,7 +7,8 @@ const opts = {
 };
 async function main() {
     const initCodeUTR = require('../artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json').bytecode;
-    const salt = 13
+    // UTR: 0x6120245B546F2F0ce439186cAae8181007366120
+    const salt = 1239303674
     const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
     const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json');
     // mainnet
