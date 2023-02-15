@@ -13,7 +13,7 @@ const DEFAULT_COMPILER_SETTINGS = {
         evmVersion: 'istanbul',
         optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 1000000,
         },
         metadata: {
             bytecodeHash: 'none',
@@ -26,11 +26,11 @@ module.exports = {
     solidity: {
         compilers: [
             {
-                version: "0.8.13",
+                version: "0.8.18",
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 200,
+                        runs: 1000000,
                     },
                 },
             },
@@ -39,7 +39,7 @@ module.exports = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 200,
+                        runs: 1000000,
                     },
                 },
             },
@@ -49,7 +49,7 @@ module.exports = {
                     evmVersion: 'istanbul',
                     optimizer: {
                         enabled: true,
-                        runs: 200,
+                        runs: 1000000,
                     },
                     metadata: {
                         bytecodeHash: 'none',
