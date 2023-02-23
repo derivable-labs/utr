@@ -33,6 +33,24 @@ const ACTION_INJECT_CALL_RESULT = 4;
 
 scenarios.forEach(function (scenario) {
     describe("Generic: " + scenario.fixtureName, function () {
+        it("Contract revert", async function () {
+            const { utr, wethAdapter } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([], [{
+                flags: 0,
+                inputs: [],
+                code: wethAdapter.address,
+                data: (await wethAdapter.populateTransaction.doRevert('some reason')).data,
+            }])).revertedWith('some reason');
+        });
+        it("Contract revert: ignored", async function () {
+            const { utr, wethAdapter } = await loadFixture(scenario.fixture);
+            await utr.exec([], [{
+                flags: ACTION_IGNORE_ERROR,
+                inputs: [],
+                code: wethAdapter.address,
+                data: (await wethAdapter.populateTransaction.doRevert('any error will be ignored')).data,
+            }]);
+        });
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);

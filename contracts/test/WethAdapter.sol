@@ -15,4 +15,8 @@ contract WethAdapter {
         IWETH(WETH).deposit{value: msg.value}();
         TransferHelper.safeTransfer(WETH, recipient, msg.value);
     }
+
+    function doRevert(string memory reason) external pure {
+        revert(reason);
+    }
 }
