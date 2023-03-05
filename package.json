@@ -9,6 +9,8 @@
     "compile": "hardhat compile",
     "build": "hardhat compile && cp artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json build/",
     "test": "hardhat test",
+    "deploy": "node scripts/sf.deploy.js",
+    "verify": "hardhat verify --network mainnet",
     "testnet": "hardhat run --network testnet",
     "mainnet": "hardhat run --network mainnet"
   },
@@ -26,7 +28,7 @@
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomiclabs/hardhat-ethers": "^2.1.0",
-    "@nomiclabs/hardhat-etherscan": "^3.1.0",
+    "@nomiclabs/hardhat-etherscan": "^3.1.6",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
