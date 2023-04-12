@@ -139,6 +139,20 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         }
     } }
 
+    function _reducePayment(
+        address sender,
+        address recipient,
+        uint eip,
+        address token,
+        uint id,
+        uint amount
+    ) internal {
+    unchecked {
+        bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
+        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
+        t_payments[key] -= amount;
+    } }
+
     function pay(
         address sender,
         address recipient,
@@ -146,13 +160,20 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         address token,
         uint id,
         uint amount
-    ) public {
-    unchecked {
-        bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
-        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
-        t_payments[key] -= amount;
+    ) override external {
+        _reducePayment(sender, recipient, eip, token, id, amount);
         _transferToken(sender, recipient, eip, token, id, amount);
-    } }
+    }
+
+    function discard(
+        address sender,
+        uint eip,
+        address token,
+        uint id,
+        uint amount
+    ) public override {
+        _reducePayment(sender, msg.sender, eip, token, id, amount);
+    }
 
     function _transferToken(
         address sender,

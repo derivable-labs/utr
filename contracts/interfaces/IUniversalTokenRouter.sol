@@ -50,4 +50,12 @@ interface IUniversalTokenRouter {
         uint id,
         uint amount
     ) external;
+
+    function discard(
+        address sender,
+        uint eip,
+        address token,
+        uint id,
+        uint amount
+    ) external;
 }
