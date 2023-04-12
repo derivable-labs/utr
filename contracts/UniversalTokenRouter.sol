@@ -9,13 +9,6 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    // values with a single 1-bit are preferred
-    uint constant TRANSFER_FROM_SENDER  = 0;
-    uint constant TRANSFER_FROM_ROUTER  = 1;
-    uint constant TRANSFER_CALL_VALUE   = 2;
-    uint constant IN_TX_PAYMENT         = 4;
-    uint constant ALLOWANCE_BRIDGE      = 8;
-
     uint constant AMOUNT_EXACT      = 0;
     uint constant AMOUNT_ALL        = 1;
 
@@ -28,7 +21,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant ACTION_INJECT_CALL_RESULT = 4;
 
     // non-persistent in-transaction pending payments
-    mapping(bytes32 => uint) s_payments;
+    mapping(bytes32 => uint) t_payments;
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
@@ -55,37 +48,40 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             uint value;
             for (uint j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
-                uint mode = input.mode;
-                address sender = mode == TRANSFER_FROM_ROUTER ? address(this) : msg.sender; 
+                bytes32 mode = input.mode;
+                address payer = bytes6(mode) == 'ROUTER' ? address(this) : msg.sender;
                 uint amount;
                 if (input.amountSource == AMOUNT_EXACT) {
                     amount = input.amountInMax;
                 } else {
                     if (input.amountSource == AMOUNT_ALL) {
-                        amount = _balanceOf(sender, input.eip, input.token, input.id);
+                        amount = _balanceOf(payer, input.eip, input.token, input.id);
                     } else {
                         amount = _sliceUint(callResult, input.amountSource);
                     }
                     require(amount <= input.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                 }
-                if (mode == TRANSFER_CALL_VALUE) {
+                if (mode == 'CALL_VALUE') {
                     value = amount;
                     continue;
                 }
-                if (mode == TRANSFER_FROM_SENDER || mode == TRANSFER_FROM_ROUTER) {
-                    _transferToken(sender, input.recipient, input.eip, input.token, input.id, amount);
-                    continue;
-                }
-                if (mode == IN_TX_PAYMENT) {
-                    bytes32 key = keccak256(abi.encodePacked(msg.sender, input.recipient, input.eip, input.token, input.id));
-                    s_payments[key] += amount;  // overflow: harmless
+                // remove the payer prefix
+                mode = bytes32(uint(mode) << 56);
+                if (mode == 'TRANSFER') {
+                    _transferToken(payer, input.recipient, input.eip, input.token, input.id, amount);
+                } else {
                     dirty = true;
-                    continue;
-                }
-                if (mode == ALLOWANCE_BRIDGE) {
-                    _approve(input.recipient, input.eip, input.token, type(uint).max);
-                    _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
-                    dirty = true;
+                    if (mode == 'PAY') {
+                        bytes32 key = keccak256(abi.encodePacked(payer, input.recipient, input.eip, input.token, input.id));
+                        t_payments[key] += amount;  // overflow: harmless
+                    } else if (mode == 'ALLOW') {
+                        _approve(input.recipient, input.eip, input.token, type(uint).max);
+                        if (payer != address(this)) {
+                            _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
+                        }
+                    } else {
+                        revert("UniversalTokenRouter: INVALID_MODE");
+                    }
                 }
             }
             if (action.data.length > 0) {
@@ -98,7 +94,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         revert(add(result,32),mload(result))
                     }
                 }
-                // delete value;   // clear the ETH value after call
                 if (action.flags & ACTION_RECORD_CALL_RESULT != 0) {
                     callResult = result;
                 }
@@ -112,18 +107,21 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             require(balance >= output.amountOutMin, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         }
 
-        // clear all in-transaction storages
+        // clear all in-transaction storages and allowances
         if (dirty) {
             for (uint i = 0; i < actions.length; ++i) {
                 Action memory action = actions[i];
                 for (uint j = 0; j < action.inputs.length; ++j) {
                     Input memory input = action.inputs[j];
-                    if (input.mode == IN_TX_PAYMENT) {
-                        bytes32 key = keccak256(abi.encodePacked(msg.sender, input.recipient, input.eip, input.token, input.id));
-                        delete s_payments[key];
+                    // remove the payer prefix
+                    bytes32 mode = bytes32(uint(input.mode) << 56);
+                    if (mode == 'PAY') {
+                        address payer = bytes6(input.mode) == 'ROUTER' ? address(this) : msg.sender;
+                        bytes32 key = keccak256(abi.encodePacked(payer, input.recipient, input.eip, input.token, input.id));
+                        delete t_payments[key];
                         continue;
                     }
-                    if (input.mode == ALLOWANCE_BRIDGE) {
+                    if (mode == 'ALLOW') {
                         _approve(input.recipient, input.eip, input.token, 0);
                         uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
                         if (balance > 0) {
@@ -151,8 +149,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     ) public {
     unchecked {
         bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
-        require(s_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
-        s_payments[key] -= amount;
+        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
+        t_payments[key] -= amount;
         _transferToken(sender, recipient, eip, token, id, amount);
     } }
 

@@ -13,16 +13,12 @@ const { scenario02 } = require("./shared/fixtures");
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
+const mode = (x) => ethers.utils.formatBytes32String(x)
 
 const scenarios = [
     { fixture: scenario02, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
-const TRANSFER_FROM_SENDER = 0;
-const TRANSFER_FROM_ROUTER = 1;
-const TRANSFER_CALL_VALUE = 2;
-const IN_TX_PAYMENT = 4;
-const ALLOWANCE_BRIDGE = 8;
 const AMOUNT_EXACT = 0;
 const AMOUNT_ALL = 1;
 const EIP_ETH = 0;
@@ -59,7 +55,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: IN_TX_PAYMENT,
+                    mode: mode('SENDER_PAY'),
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -93,7 +89,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: TRANSFER_CALL_VALUE,
+                    mode: mode('CALL_VALUE'),
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
@@ -134,7 +130,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: IN_TX_PAYMENT,
+                    mode: mode('SENDER_PAY'),
                     eip: 20,
                     token: usdc.address,
                     id: 0,
@@ -159,7 +155,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: TRANSFER_CALL_VALUE,
+                    mode: mode('CALL_VALUE'),
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
@@ -187,7 +183,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: TRANSFER_CALL_VALUE,
+                    mode: mode('CALL_VALUE'),
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
@@ -219,7 +215,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: IN_TX_PAYMENT,
+                    mode: mode('SENDER_PAY'),
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -257,7 +253,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: IN_TX_PAYMENT,
+                    mode: mode('SENDER_PAY'),
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -290,7 +286,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: IN_TX_PAYMENT,
+                    mode: mode('SENDER_PAY'),
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -316,7 +312,7 @@ scenarios.forEach(function (scenario) {
             }])
         });
 
-        it("PositionManager.mint: ALLOWANCE_BRIDGE", async function () {
+        it("PositionManager.mint: SENDER_ALLOW", async function () {
             await usdc.approve(utr.address, MaxUint256);
 
             // Mint
@@ -328,7 +324,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: ALLOWANCE_BRIDGE,
+                    mode: mode('SENDER_ALLOW'),
                     eip: 20,
                     token: usdc.address,
                     id: 0,
@@ -336,7 +332,7 @@ scenarios.forEach(function (scenario) {
                     amountInMax: '2000',
                     recipient: uniswapv3PositionManager.address,
                 }, {
-                    mode: TRANSFER_CALL_VALUE,
+                    mode: mode('CALL_VALUE'),
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
@@ -366,7 +362,7 @@ scenarios.forEach(function (scenario) {
             //Add liquidity
             await utr.exec([], [{
                 inputs: [{
-                    mode: ALLOWANCE_BRIDGE,
+                    mode: mode('SENDER_ALLOW'),
                     eip: 20,
                     token: usdc.address,
                     id: 0,
@@ -374,7 +370,7 @@ scenarios.forEach(function (scenario) {
                     amountInMax: '2000',
                     recipient: uniswapv3PositionManager.address,
                 }, {
-                    mode: TRANSFER_CALL_VALUE,
+                    mode: mode('CALL_VALUE'),
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
