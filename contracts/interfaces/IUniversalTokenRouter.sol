@@ -14,10 +14,10 @@ struct Output {
  *  CALL_VALUE
  *  SENDER_TRANSFER
  *  SENDER_PAY
- *  SENDER_ALLOW
+ *  SENDER_APPROVE
  *  ROUTER_TRANSFER
  *  ROUTER_PAY
- *  ROUTER_ALLOW
+ *  ROUTER_APPROVE
  */
 struct Input {
     bytes32 mode;

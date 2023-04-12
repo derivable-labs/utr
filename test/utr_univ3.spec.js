@@ -77,7 +77,7 @@ scenarios.forEach(function (scenario) {
                 weth.address,
                 0,
                 1,
-            )).revertedWith('INSUFFICIENT_ALLOWANCE')
+            )).revertedWith('INSUFFICIENT_APPROVEANCE')
         });
 
         it("eth -> usdc", async function () {
@@ -171,7 +171,7 @@ scenarios.forEach(function (scenario) {
             }], {
                 value: '2000'
             })
-            await expect(request).to.be.revertedWith('UniversalTokenRouter: INSUFFICIENT_ALLOWANCE')
+            await expect(request).to.be.revertedWith('UniversalTokenRouter: INSUFFICIENT_APPROVEANCE')
         });
 
         it("insufficient output", async function () {
@@ -312,7 +312,7 @@ scenarios.forEach(function (scenario) {
             }])
         });
 
-        it("PositionManager.mint: SENDER_ALLOW", async function () {
+        it("PositionManager.mint: SENDER_APPROVE", async function () {
             await usdc.approve(utr.address, MaxUint256);
 
             // Mint
@@ -324,7 +324,7 @@ scenarios.forEach(function (scenario) {
                 recipient: owner.address,
             }], [{
                 inputs: [{
-                    mode: mode('SENDER_ALLOW'),
+                    mode: mode('SENDER_APPROVE'),
                     eip: 20,
                     token: usdc.address,
                     id: 0,
@@ -362,7 +362,7 @@ scenarios.forEach(function (scenario) {
             //Add liquidity
             await utr.exec([], [{
                 inputs: [{
-                    mode: mode('SENDER_ALLOW'),
+                    mode: mode('SENDER_APPROVE'),
                     eip: 20,
                     token: usdc.address,
                     id: 0,

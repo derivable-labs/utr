@@ -74,7 +74,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     if (mode == 'PAY') {
                         bytes32 key = keccak256(abi.encodePacked(payer, input.recipient, input.eip, input.token, input.id));
                         t_payments[key] += amount;  // overflow: harmless
-                    } else if (mode == 'ALLOW') {
+                    } else if (mode == 'APPROVE') {
                         _approve(input.recipient, input.eip, input.token, type(uint).max);
                         if (payer != address(this)) {
                             _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
@@ -121,7 +121,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                         delete t_payments[key];
                         continue;
                     }
-                    if (mode == 'ALLOW') {
+                    if (mode == 'APPROVE') {
                         _approve(input.recipient, input.eip, input.token, 0);
                         uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
                         if (balance > 0) {
@@ -149,7 +149,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     ) internal {
     unchecked {
         bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
-        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_ALLOWANCE');
+        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_APPROVEANCE');
         t_payments[key] -= amount;
     } }
 
