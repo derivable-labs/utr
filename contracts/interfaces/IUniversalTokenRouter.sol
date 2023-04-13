@@ -9,18 +9,8 @@ struct Output {
     uint amountOutMin;
 }
 
-/**
- * @param mode takes one of the following bytes32 string values:
- *  CALL_VALUE
- *  SENDER_TRANSFER
- *  SENDER_PAY
- *  SENDER_APPROVE
- *  ROUTER_TRANSFER
- *  ROUTER_PAY
- *  ROUTER_APPROVE
- */
 struct Input {
-    bytes32 mode;
+    uint mode;
     address recipient;
     uint eip;           // token standard: 0 for ETH or EIP number
     address token;      // token contract address

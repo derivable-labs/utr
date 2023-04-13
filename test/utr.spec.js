@@ -13,11 +13,16 @@ const { scenario01 } = require("./shared/fixtures");
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
-const mode = (x) => ethers.utils.formatBytes32String(x)
 
 const scenarios = [
     { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
+
+const FROM_ROUTER   = 10;
+const PAYMENT       = 0;
+const TRANSFER      = 1;
+const ALLOWANCE     = 2;
+const CALL_VALUE    = 3;
 
 const AMOUNT_EXACT = 0;
 const AMOUNT_ALL = 1;
@@ -70,7 +75,7 @@ scenarios.forEach(function (scenario) {
             }], [{
                 flags: 0,
                 inputs: [{
-                    mode: mode('SENDER_TRANSFER'),
+                    mode: TRANSFER,
                     recipient: uniswapPool.address,
                     eip: 20,
                     token: path[0],
@@ -114,7 +119,7 @@ scenarios.forEach(function (scenario) {
                 data: (await uniswapV2Helper01.populateTransaction.getAmountsIn(amountOut, path)).data,
             }, {
                 inputs: [{
-                    mode: mode('SENDER_TRANSFER'),
+                    mode: TRANSFER,
                     eip: 20,
                     token: path[0],
                     id: 0,
@@ -161,7 +166,7 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }, {
                 inputs: [{
-                    mode: mode('SENDER_TRANSFER'),
+                    mode: TRANSFER,
                     eip: 20,
                     token: tokenA,
                     id: 0,
@@ -169,7 +174,7 @@ scenarios.forEach(function (scenario) {
                     amountInMax: amountADesired,
                     recipient: uniswapPool.address,
                 }, {
-                    mode: mode('SENDER_TRANSFER'),
+                    mode: TRANSFER,
                     eip: 20,
                     token: tokenB,
                     id: 0,
@@ -194,7 +199,7 @@ scenarios.forEach(function (scenario) {
                 recipient: someRecipient,
             }], [{
                 inputs: [{
-                    mode: mode('CALL_VALUE'),
+                    mode: CALL_VALUE,
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
@@ -207,7 +212,7 @@ scenarios.forEach(function (scenario) {
                 data: (await weth.populateTransaction.deposit()).data,    // WETH.deposit returns WETH token to the UTR contract
             }, {
                 inputs: [{
-                    mode: mode('ROUTER_TRANSFER'),
+                    mode: TRANSFER + FROM_ROUTER,
                     eip: 20,
                     token: weth.address,
                     id: 0,
@@ -235,7 +240,7 @@ scenarios.forEach(function (scenario) {
                 recipient: someRecipient,
             }], [{
                 inputs: [{
-                    mode: mode('CALL_VALUE'),
+                    mode: CALL_VALUE,
                     eip: 0,                 // ETH
                     token: AddressZero,
                     id: 0,

@@ -9,10 +9,17 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
 contract UniversalTokenRouter is IUniversalTokenRouter {
-    uint constant AMOUNT_EXACT      = 0;
-    uint constant AMOUNT_ALL        = 1;
+    // decimals uint are friendly to explorers and wallets
+    uint constant FROM_ROUTER   = 10;
+    uint constant PAYMENT       = 0;
+    uint constant TRANSFER      = 1;
+    uint constant ALLOWANCE     = 2;
+    uint constant CALL_VALUE    = 3;
 
-    uint constant EIP_ETH           = 0;
+    uint constant AMOUNT_EXACT  = 0;
+    uint constant AMOUNT_ALL    = 1;
+
+    uint constant EIP_ETH       = 0;
 
     uint constant ID_721_ALL = uint(keccak256('UniversalTokenRouter.ID_721_ALL'));
 
@@ -48,8 +55,8 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             uint value;
             for (uint j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
-                bytes32 mode = input.mode;
-                address payer = bytes6(mode) == 'ROUTER' ? address(this) : msg.sender;
+                uint mode = input.mode;
+                address payer = mode/10 == FROM_ROUTER/10 ? address(this) : msg.sender;
                 uint amount;
                 if (input.amountSource == AMOUNT_EXACT) {
                     amount = input.amountInMax;
@@ -61,20 +68,20 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     }
                     require(amount <= input.amountInMax, "UniversalTokenRouter: EXCESSIVE_INPUT_AMOUNT");
                 }
-                if (mode == 'CALL_VALUE') {
+                if (mode == CALL_VALUE) {
                     value = amount;
                     continue;
                 }
                 // remove the payer prefix
-                mode = bytes32(uint(mode) << 56);
-                if (mode == 'TRANSFER') {
+                mode %= 10;
+                if (mode == TRANSFER) {
                     _transferToken(payer, input.recipient, input.eip, input.token, input.id, amount);
                 } else {
                     dirty = true;
-                    if (mode == 'PAY') {
+                    if (mode == PAYMENT) {
                         bytes32 key = keccak256(abi.encodePacked(payer, input.recipient, input.eip, input.token, input.id));
                         t_payments[key] += amount;  // overflow: harmless
-                    } else if (mode == 'APPROVE') {
+                    } else if (mode == ALLOWANCE) {
                         _approve(input.recipient, input.eip, input.token, type(uint).max);
                         if (payer != address(this)) {
                             _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
@@ -114,14 +121,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 for (uint j = 0; j < action.inputs.length; ++j) {
                     Input memory input = action.inputs[j];
                     // remove the payer prefix
-                    bytes32 mode = bytes32(uint(input.mode) << 56);
-                    if (mode == 'PAY') {
-                        address payer = bytes6(input.mode) == 'ROUTER' ? address(this) : msg.sender;
+                    uint mode = input.mode % 10;
+                    if (mode == PAYMENT) {
+                        address payer = input.mode/10 == FROM_ROUTER/10 ? address(this) : msg.sender;
                         bytes32 key = keccak256(abi.encodePacked(payer, input.recipient, input.eip, input.token, input.id));
                         delete t_payments[key];
                         continue;
                     }
-                    if (mode == 'APPROVE') {
+                    if (mode == ALLOWANCE) {
                         _approve(input.recipient, input.eip, input.token, 0);
                         uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
                         if (balance > 0) {
