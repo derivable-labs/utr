@@ -150,7 +150,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     ) internal {
     unchecked {
         bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
-        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_APPROVEANCE');
+        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_PAYMENT');
         t_payments[key] -= amount;
     } }
 

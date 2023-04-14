@@ -82,7 +82,7 @@ scenarios.forEach(function (scenario) {
                 weth.address,
                 0,
                 1,
-            )).revertedWith('INSUFFICIENT_APPROVEANCE')
+            )).revertedWith('INSUFFICIENT_PAYMENT')
         });
 
         it("eth -> usdc", async function () {
@@ -176,7 +176,7 @@ scenarios.forEach(function (scenario) {
             }], {
                 value: '2000'
             })
-            await expect(request).to.be.revertedWith('UniversalTokenRouter: INSUFFICIENT_APPROVEANCE')
+            await expect(request).to.be.revertedWith('UniversalTokenRouter: INSUFFICIENT_PAYMENT')
         });
 
         it("insufficient output", async function () {
