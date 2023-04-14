@@ -47,12 +47,11 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             output.amountOutMin = expected;
         }
 
-        bool dirty = false;
-
         bytes memory callResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
             uint value;
+            bool dirty;
             for (uint j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
                 uint mode = input.mode;
@@ -105,6 +104,26 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     callResult = result;
                 }
             }
+            // clear all in-transaction storages and allowances
+            if (!dirty) {
+                continue;
+            }
+            for (uint j = 0; j < action.inputs.length; ++j) {
+                Input memory input = action.inputs[j];
+                // remove the payer prefix
+                uint mode = input.mode % 10;
+                if (mode == PAYMENT) {
+                    address payer = input.mode/10 == FROM_ROUTER/10 ? address(this) : msg.sender;
+                    bytes32 key = keccak256(abi.encodePacked(payer, input.recipient, input.eip, input.token, input.id));
+                    delete t_payments[key];
+                } else if (mode == ALLOWANCE) {
+                    _approve(input.recipient, input.eip, input.token, 0);
+                    uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
+                    if (balance > 0) {
+                        _transferToken(address(this), msg.sender, input.eip, input.token, input.id, balance);
+                    }
+                }
+            }
         }
 
         // verify balance changes
@@ -112,31 +131,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             Output memory output = outputs[i];
             uint balance = _balanceOf(output.recipient, output.eip, output.token, output.id);
             require(balance >= output.amountOutMin, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
-        }
-
-        // clear all in-transaction storages and allowances
-        if (dirty) {
-            for (uint i = 0; i < actions.length; ++i) {
-                Action memory action = actions[i];
-                for (uint j = 0; j < action.inputs.length; ++j) {
-                    Input memory input = action.inputs[j];
-                    // remove the payer prefix
-                    uint mode = input.mode % 10;
-                    if (mode == PAYMENT) {
-                        address payer = input.mode/10 == FROM_ROUTER/10 ? address(this) : msg.sender;
-                        bytes32 key = keccak256(abi.encodePacked(payer, input.recipient, input.eip, input.token, input.id));
-                        delete t_payments[key];
-                        continue;
-                    }
-                    if (mode == ALLOWANCE) {
-                        _approve(input.recipient, input.eip, input.token, 0);
-                        uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
-                        if (balance > 0) {
-                            _transferToken(address(this), msg.sender, input.eip, input.token, input.id, balance);
-                        }
-                    }
-                }
-            }
         }
 
         // refund any left-over ETH
