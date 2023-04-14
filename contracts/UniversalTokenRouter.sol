@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/token/ERC777/IERC777.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
+import "./ReentrancyCheck.sol";
 
-contract UniversalTokenRouter is IUniversalTokenRouter {
+contract UniversalTokenRouter is ReentrancyCheck, IUniversalTokenRouter {
     // decimals uint are friendly to explorers and wallets
     uint constant FROM_ROUTER   = 10;
     uint constant PAYMENT       = 0;
@@ -26,6 +27,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant ACTION_IGNORE_ERROR       = 1;
     uint constant ACTION_RECORD_CALL_RESULT = 2;
     uint constant ACTION_INJECT_CALL_RESULT = 4;
+    uint constant ACTION_REENTRANTABLE      = 8;
 
     // non-persistent in-transaction pending payments
     mapping(bytes32 => uint) t_payments;
@@ -36,7 +38,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     function exec(
         Output[] memory outputs,
         Action[] memory actions
-    ) override external payable {
+    ) override external payable checkReentrancy {
     unchecked {
         // track the expected balances before any action is executed
         for (uint i = 0; i < outputs.length; ++i) {
@@ -94,6 +96,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                 if (action.flags & ACTION_INJECT_CALL_RESULT != 0) {
                     action.data = _concat(action.data, action.data.length, callResult);
                 }
+                lockReentrancy(action.flags & ACTION_REENTRANTABLE == 0);
                 (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                 if (!success && action.flags & ACTION_IGNORE_ERROR == 0) {
                     assembly {
@@ -138,6 +141,9 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         if (leftOver > 0) {
             TransferHelper.safeTransferETH(msg.sender, leftOver);
         }
+
+        // release the lock
+        lockReentrancy(false);
     } }
 
     function _reducePayment(
