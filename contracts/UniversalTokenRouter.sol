@@ -52,6 +52,7 @@ contract UniversalTokenRouter is ReentrancyCheck, IUniversalTokenRouter {
         bytes memory callResult;
         for (uint i = 0; i < actions.length; ++i) {
             Action memory action = actions[i];
+            lockReentrancy(action.flags & ACTION_REENTRANTABLE == 0);
             uint value;
             bool dirty;
             for (uint j = 0; j < action.inputs.length; ++j) {
@@ -96,7 +97,6 @@ contract UniversalTokenRouter is ReentrancyCheck, IUniversalTokenRouter {
                 if (action.flags & ACTION_INJECT_CALL_RESULT != 0) {
                     action.data = _concat(action.data, action.data.length, callResult);
                 }
-                lockReentrancy(action.flags & ACTION_REENTRANTABLE == 0);
                 (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                 if (!success && action.flags & ACTION_IGNORE_ERROR == 0) {
                     assembly {
