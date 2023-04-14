@@ -84,7 +84,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     } else if (mode == ALLOWANCE) {
                         _approve(input.recipient, input.eip, input.token, type(uint).max);
                         if (payer != address(this)) {
-                            _transferToken(msg.sender, address(this), input.eip, input.token, input.id, amount);
+                            _transferToken(payer, address(this), input.eip, input.token, input.id, amount);
                         }
                     } else {
                         revert("UniversalTokenRouter: INVALID_MODE");
