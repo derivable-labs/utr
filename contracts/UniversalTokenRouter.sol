@@ -22,7 +22,7 @@ contract UniversalTokenRouter is ReentrancyCheck, IUniversalTokenRouter {
 
     uint constant EIP_ETH       = 0;
 
-    uint constant ID_721_ALL = uint(keccak256('UniversalTokenRouter.ID_721_ALL'));
+    uint constant ERC_721_BALANCE = uint(keccak256('UniversalTokenRouter.ERC_721_BALANCE'));
 
     uint constant ACTION_IGNORE_ERROR       = 1;
     uint constant ACTION_RECORD_CALL_RESULT = 2;
@@ -238,7 +238,7 @@ contract UniversalTokenRouter is ReentrancyCheck, IUniversalTokenRouter {
             return IERC1155(token).balanceOf(owner, id);
         }
         if (eip == 721) {
-            if (id == ID_721_ALL) {
+            if (id == ERC_721_BALANCE) {
                 return IERC721(token).balanceOf(owner);
             }
             try IERC721(token).ownerOf(id) returns (address currentOwner) {
