@@ -45,7 +45,7 @@ contract UniversalTokenRouter is ReentrancyCheck, IUniversalTokenRouter {
             Output memory output = outputs[i];
             uint balance = _balanceOf(output.recipient, output.eip, output.token, output.id);
             uint expected = output.amountOutMin + balance;
-            require(expected >= balance, 'UniversalTokenRouter: OVERFLOW');
+            require(expected >= balance, 'UniversalTokenRouter: OUTPUT_BALANCE_OVERFLOW');
             output.amountOutMin = expected;
         }
 

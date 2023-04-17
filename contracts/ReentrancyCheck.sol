@@ -36,7 +36,7 @@ abstract contract ReentrancyCheck {
      */
     modifier checkReentrancy() {
         // On the first call to nonReentrant, _status will be UNLOCKED
-        require(t_lock != LOCKED, "UniversalTokenRouter: REENTRACT_LOCKED");
+        require(t_lock != LOCKED, "UniversalTokenRouter: REENTRANT_LOCKED");
         _;
     }
 
