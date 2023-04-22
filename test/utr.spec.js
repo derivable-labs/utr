@@ -18,19 +18,13 @@ const scenarios = [
     { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
-const FROM_ROUTER   = 10;
 const PAYMENT       = 0;
 const TRANSFER      = 1;
 const ALLOWANCE     = 2;
 const CALL_VALUE    = 3;
 
-const AMOUNT_EXACT = 0;
-const AMOUNT_ALL = 1;
 const EIP_ETH = 0;
 const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1;
-const ACTION_RECORD_CALL_RESULT = 2;
-const ACTION_INJECT_CALL_RESULT = 4;
 
 scenarios.forEach(function (scenario) {
     describe("Generic: " + scenario.fixtureName, function () {
@@ -71,8 +65,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: path[0],
                     id: 0,
-                    amountInMax: amountIn,
-                    amountSource: AMOUNT_EXACT,
+                    amountIn,
                 }],
                 code: uniswapV2Helper01.address,
                 data: (await uniswapV2Helper01.populateTransaction.swapExactTokensForTokens(
@@ -101,8 +94,7 @@ scenarios.forEach(function (scenario) {
                     eip: 0,                 // ETH
                     token: AddressZero,
                     id: 0,
-                    amountInMax: 123,
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: 123,
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
                 flags: 0,

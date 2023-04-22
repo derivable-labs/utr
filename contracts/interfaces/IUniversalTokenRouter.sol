@@ -15,8 +15,7 @@ struct Input {
     uint eip;           // token standard: 0 for ETH or EIP number
     address token;      // token contract address
     uint id;            // token id for EIP721 and EIP1155
-    uint amountInMax;
-    uint amountSource;  // where to get the actual amountIn
+    uint amountIn;
 }
 
 struct Action {

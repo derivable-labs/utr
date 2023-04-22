@@ -18,19 +18,13 @@ const scenarios = [
     { fixture: scenario02, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
-const FROM_ROUTER   = 10;
 const PAYMENT       = 0;
 const TRANSFER      = 1;
 const ALLOWANCE     = 2;
 const CALL_VALUE    = 3;
 
-const AMOUNT_EXACT = 0;
-const AMOUNT_ALL = 1;
 const EIP_ETH = 0;
 const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1;
-const ACTION_RECORD_CALL_RESULT = 2;
-const ACTION_INJECT_CALL_RESULT = 4;
 
 scenarios.forEach(function (scenario) {
     describe("Uniswap/v3: " + scenario.fixtureName, function () {
@@ -44,7 +38,7 @@ scenarios.forEach(function (scenario) {
                 path: encodePath([tokenIn.address, tokenOut.address], [3000]),
                 recipient: owner.address,
                 deadline: new Date().getTime() + 100000,
-                amountIn: amountIn,
+                amountIn,
                 amountOutMinimum: amountOutMin,
             }
         }
@@ -64,8 +58,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: weth.address,
                     id: 0,
-                    amountSource: AMOUNT_EXACT,
-                    amountInMax: '2000',
+                    amountIn: '2000',
                     recipient: poolAddress,
                 }],
                 flags: 0,
@@ -98,8 +91,7 @@ scenarios.forEach(function (scenario) {
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
-                    amountInMax: '2000',
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: '2000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
                 flags: 0,
@@ -139,8 +131,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: usdc.address,
                     id: 0,
-                    amountInMax: '2000',
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: '2000',
                     recipient: poolAddress, // pass it as the value for the next output action
                 }],
                 flags: 0,
@@ -164,8 +155,7 @@ scenarios.forEach(function (scenario) {
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
-                    amountInMax: '1000',
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: '1000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
                 flags: 0,
@@ -192,8 +182,7 @@ scenarios.forEach(function (scenario) {
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
-                    amountInMax: '2000',
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: '2000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
                 flags: 0,
@@ -224,8 +213,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: weth.address,
                     id: 0,
-                    amountSource: AMOUNT_EXACT,
-                    amountInMax: '1000',
+                    amountIn: '1000',
                     recipient: poolAddress,
                 }],
                 flags: 0,
@@ -262,8 +250,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: weth.address,
                     id: 0,
-                    amountSource: AMOUNT_EXACT,
-                    amountInMax: '1600',
+                    amountIn: '1600',
                     recipient: poolAddress,
                 }],
                 flags: 0,
@@ -295,8 +282,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: weth.address,
                     id: 0,
-                    amountSource: AMOUNT_EXACT,
-                    amountInMax: '1600',
+                    amountIn: '1600',
                     recipient: poolAddress,
                 }],
                 flags: 0,
@@ -333,16 +319,14 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: usdc.address,
                     id: 0,
-                    amountSource: AMOUNT_EXACT,
-                    amountInMax: '2000',
+                    amountIn: '2000',
                     recipient: uniswapv3PositionManager.address,
                 }, {
                     mode: CALL_VALUE,
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
-                    amountInMax: '2000',
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: '2000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
                 flags: 0,
@@ -371,16 +355,14 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: usdc.address,
                     id: 0,
-                    amountSource: AMOUNT_EXACT,
-                    amountInMax: '2000',
+                    amountIn: '2000',
                     recipient: uniswapv3PositionManager.address,
                 }, {
                     mode: CALL_VALUE,
                     eip: 0, // ETH
                     token: AddressZero,
                     id: 0,
-                    amountInMax: '2000',
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: '2000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
                 flags: 0,
