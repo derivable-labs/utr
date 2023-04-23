@@ -20,7 +20,6 @@ struct Input {
 
 struct Action {
     Input[] inputs;
-    uint flags;
     address code;       // contract code address
     bytes data;         // contract input data
 }
