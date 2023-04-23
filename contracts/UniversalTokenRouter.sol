@@ -30,7 +30,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         // track the expected balances before any action is executed
         for (uint i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
-            uint balance = _balanceOf(output.recipient, output.eip, output.token, output.id);
+            uint balance = _balanceOf(output);
             uint expected = output.amountOutMin + balance;
             require(expected >= balance, 'UniversalTokenRouter: OUTPUT_BALANCE_OVERFLOW');
             output.amountOutMin = expected;
@@ -82,7 +82,7 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         // verify balance changes
         for (uint i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
-            uint balance = _balanceOf(output.recipient, output.eip, output.token, output.id);
+            uint balance = _balanceOf(output);
             // NOTE: output.amountOutMin is reused as `expected`
             require(balance >= output.amountOutMin, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         }
@@ -151,29 +151,27 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
     }
 
     function _balanceOf(
-        address owner,
-        uint eip,
-        address token,
-        uint id
+        Output memory output
     ) internal view returns (uint balance) {
+        uint eip = output.eip;
         if (eip == 20) {
-            return IERC20(token).balanceOf(owner);
+            return IERC20(output.token).balanceOf(output.recipient);
         }
         if (eip == 1155) {
-            return IERC1155(token).balanceOf(owner, id);
+            return IERC1155(output.token).balanceOf(output.recipient, output.id);
         }
         if (eip == 721) {
-            if (id == ERC_721_BALANCE) {
-                return IERC721(token).balanceOf(owner);
+            if (output.id == ERC_721_BALANCE) {
+                return IERC721(output.token).balanceOf(output.recipient);
             }
-            try IERC721(token).ownerOf(id) returns (address currentOwner) {
-                return currentOwner == owner ? 1 : 0;
+            try IERC721(output.token).ownerOf(output.id) returns (address currentOwner) {
+                return currentOwner == output.recipient ? 1 : 0;
             } catch {
                 return 0;
             }
         }
         if (eip == EIP_ETH) {
-            return owner.balance;
+            return output.recipient.balance;
         }
         revert("UniversalTokenRouter: INVALID_EIP");
     }
