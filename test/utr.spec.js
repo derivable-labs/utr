@@ -76,6 +76,93 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }]);
         });
+        it("UniswapRouter.swapTokensForExactTokens", async function () {
+            const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
+            await weth.approve(utr.address, MaxUint256);
+            await weth.deposit({ value: pe(100) });
+
+            const amountOut = pe(1400);
+            const path = [
+                weth.address,
+                busd.address
+            ];
+            const amountInMax = pe(1);
+            const to = owner.address;
+            const deadline = MaxUint256
+
+            await utr.exec([{
+                eip: 20,
+                token: path[path.length - 1],
+                id: 0,
+                amountOutMin: amountOut,
+                recipient: to,
+            }], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: path[0],
+                    id: 0,
+                    amountIn: amountInMax,
+                    recipient: uniswapPool.address,
+                }],
+                code: uniswapV2Helper01.address,
+                data: (await uniswapV2Helper01.populateTransaction.swapTokensForTokensExact(
+                    amountInMax,
+                    amountOut,
+                    path,
+                    to,
+                    to,
+                    deadline
+                )).data,
+            }]);
+        });
+        it("UniswapRouter.addLiquidity", async function () {
+            const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
+            await weth.approve(utr.address, MaxUint256);
+            await weth.deposit({ value: pe(100) });
+            await busd.approve(utr.address, MaxUint256);
+
+            const tokenA = busd.address;
+            const tokenB = weth.address;
+            const amountADesired = pe(1500);
+            const amountBDesired = pe(1);
+            const to = owner.address;
+            await utr.exec([{
+                eip: 20,
+                token: uniswapPool.address,
+                id: 0,
+                amountOutMin: 1,  // just enough to verify the correct recipient
+                recipient: to,
+            }], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: tokenA,
+                    id: 0,
+                    amountIn: amountADesired,
+                    recipient: uniswapPool.address,
+                }, {
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: tokenB,
+                    id: 0,
+                    amountIn: amountBDesired,
+                    recipient: uniswapPool.address,
+                }],
+                flags: 0,
+                code: uniswapV2Helper01.address,
+                data: (await uniswapV2Helper01.populateTransaction._addLiquidity(
+                    tokenA,
+                    tokenB,
+                    amountADesired,
+                    amountBDesired,
+                    0,
+                    0,
+                    to,
+                    to
+                )).data,
+            }]);
+        });
         it("Adapter contract for WETH", async function () {
             const { utr, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);

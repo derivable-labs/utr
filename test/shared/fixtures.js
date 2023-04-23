@@ -52,7 +52,8 @@ async function scenario01() {
     const UniswapV2Helper01 = await ethers.getContractFactory("UniswapV2Helper01");
     const uniswapV2Helper01 = await UniswapV2Helper01.deploy(
         uniswapFactory.address,
-        weth.address
+        weth.address,
+        utr.address
     );
     await uniswapV2Helper01.deployed();
 
