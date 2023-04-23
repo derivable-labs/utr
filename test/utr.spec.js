@@ -20,8 +20,7 @@ const scenarios = [
 
 const PAYMENT       = 0;
 const TRANSFER      = 1;
-const ALLOWANCE     = 2;
-const CALL_VALUE    = 3;
+const CALL_VALUE    = 2;
 
 const EIP_ETH = 0;
 const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))

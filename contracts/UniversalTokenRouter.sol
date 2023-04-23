@@ -10,8 +10,7 @@ import "./interfaces/IUniversalTokenRouter.sol";
 contract UniversalTokenRouter is IUniversalTokenRouter {
     uint constant PAYMENT       = 0;
     uint constant TRANSFER      = 1;
-    uint constant ALLOWANCE     = 2;
-    uint constant CALL_VALUE    = 3;
+    uint constant CALL_VALUE    = 2;
 
     uint constant EIP_ETH       = 0;
 
@@ -45,17 +44,14 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
             for (uint j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
                 uint mode = input.mode;
-                if (mode == CALL_VALUE) {
-                    // require(input.eip == EIP_ETH && input.id == 0, "UniversalTokenRouter: ETH_ONLY");
-                    value = input.amountIn;
-                } else if (mode == TRANSFER) {
-                    _transferToken(sender, input.recipient, input.eip, input.token, input.id, input.amountIn);
-                } else if (mode == PAYMENT) {
+                if (mode == PAYMENT) {
                     bytes32 key = keccak256(abi.encodePacked(sender, input.recipient, input.eip, input.token, input.id));
                     t_payments[key] = input.amountIn;
-                } else if (mode == ALLOWANCE) {
-                    _approve(input.recipient, input.eip, input.token, type(uint).max);
-                    _transferToken(sender, address(this), input.eip, input.token, input.id, input.amountIn);
+                } else if (mode == TRANSFER) {
+                    _transferToken(sender, input.recipient, input.eip, input.token, input.id, input.amountIn);
+                } else if (mode == CALL_VALUE) {
+                    // require(input.eip == EIP_ETH && input.id == 0, "UniversalTokenRouter: ETH_ONLY");
+                    value = input.amountIn;
                 }
             }
             if (action.data.length > 0) {
@@ -73,14 +69,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
                     // in-transaction storages
                     bytes32 key = keccak256(abi.encodePacked(sender, input.recipient, input.eip, input.token, input.id));
                     delete t_payments[key];
-                } else if (input.mode == ALLOWANCE) {
-                    // in-transaction allowance
-                    _approve(input.recipient, input.eip, input.token, 0);
-                    // possible left-over tokens
-                    uint balance = _balanceOf(address(this), input.eip, input.token, input.id);
-                    if (balance > 0) {
-                        _transferToken(address(this), sender, input.eip, input.token, input.id, balance);
-                    }
                 }
             }
         }
@@ -157,23 +145,6 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
         } else if (eip == EIP_ETH) {
             require(sender == address(this), 'UniversalTokenRouter: INVALID_ETH_SENDER');
             TransferHelper.safeTransferETH(recipient, amount);
-        } else {
-            revert("UniversalTokenRouter: INVALID_EIP");
-        }
-    }
-
-    function _approve(
-        address recipient,
-        uint eip,
-        address token,
-        uint amount
-    ) internal {
-        if (eip == 20) {
-            TransferHelper.safeApprove(token, recipient, amount);
-        } else if (eip == 1155) {
-            IERC1155(token).setApprovalForAll(recipient, amount > 0);
-        } else if (eip == 721) {
-            IERC721(token).setApprovalForAll(recipient, amount > 0);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
