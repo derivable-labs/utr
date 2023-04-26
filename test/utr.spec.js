@@ -18,19 +18,12 @@ const scenarios = [
     { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
-const FROM_ROUTER   = 10;
 const PAYMENT       = 0;
 const TRANSFER      = 1;
-const ALLOWANCE     = 2;
-const CALL_VALUE    = 3;
+const CALL_VALUE    = 2;
 
-const AMOUNT_EXACT = 0;
-const AMOUNT_ALL = 1;
 const EIP_ETH = 0;
 const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1;
-const ACTION_RECORD_CALL_RESULT = 2;
-const ACTION_INJECT_CALL_RESULT = 4;
 
 scenarios.forEach(function (scenario) {
     describe("Generic: " + scenario.fixtureName, function () {
@@ -42,15 +35,6 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.doRevert('some reason')).data,
             }])).revertedWith('some reason');
-        });
-        it("Contract revert: ignored", async function () {
-            const { utr, wethAdapter } = await loadFixture(scenario.fixture);
-            await utr.exec([], [{
-                flags: ACTION_IGNORE_ERROR,
-                inputs: [],
-                code: wethAdapter.address,
-                data: (await wethAdapter.populateTransaction.doRevert('any error will be ignored')).data,
-            }]);
         });
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
@@ -80,8 +64,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: path[0],
                     id: 0,
-                    amountInMax: amountIn,
-                    amountSource: AMOUNT_EXACT,
+                    amountIn,
                 }],
                 code: uniswapV2Helper01.address,
                 data: (await uniswapV2Helper01.populateTransaction.swapExactTokensForTokens(
@@ -105,6 +88,7 @@ scenarios.forEach(function (scenario) {
             ];
             const amountInMax = pe(1);
             const to = owner.address;
+            const deadline = MaxUint256
 
             await utr.exec([{
                 eip: 20,
@@ -113,23 +97,23 @@ scenarios.forEach(function (scenario) {
                 amountOutMin: amountOut,
                 recipient: to,
             }], [{
-                inputs: [],
-                flags: ACTION_RECORD_CALL_RESULT,
-                code: uniswapV2Helper01.address,
-                data: (await uniswapV2Helper01.populateTransaction.getAmountsIn(amountOut, path)).data,
-            }, {
                 inputs: [{
-                    mode: TRANSFER,
+                    mode: PAYMENT,
                     eip: 20,
                     token: path[0],
                     id: 0,
-                    amountInMax,
-                    amountSource: 32 * 3, // first item of getAmountIns result array
+                    amountIn: amountInMax,
                     recipient: uniswapPool.address,
                 }],
-                flags: ACTION_INJECT_CALL_RESULT,
                 code: uniswapV2Helper01.address,
-                data: (await uniswapV2Helper01.populateTransaction.swap(path, to, '0x')).data,
+                data: (await uniswapV2Helper01.populateTransaction.swapTokensForTokensExact(
+                    amountInMax,
+                    amountOut,
+                    path,
+                    to,
+                    to,
+                    deadline
+                )).data,
             }]);
         });
         it("UniswapRouter.addLiquidity", async function () {
@@ -142,10 +126,7 @@ scenarios.forEach(function (scenario) {
             const tokenB = weth.address;
             const amountADesired = pe(1500);
             const amountBDesired = pe(1);
-            const amountAMin = pe(0);
-            const amountBMin = pe(0);
             const to = owner.address;
-
             await utr.exec([{
                 eip: 20,
                 token: uniswapPool.address,
@@ -153,79 +134,34 @@ scenarios.forEach(function (scenario) {
                 amountOutMin: 1,  // just enough to verify the correct recipient
                 recipient: to,
             }], [{
-                inputs: [],
-                flags: ACTION_RECORD_CALL_RESULT,
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: tokenA,
+                    id: 0,
+                    amountIn: amountADesired,
+                    recipient: uniswapPool.address,
+                }, {
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: tokenB,
+                    id: 0,
+                    amountIn: amountBDesired,
+                    recipient: uniswapPool.address,
+                }],
+                flags: 0,
                 code: uniswapV2Helper01.address,
                 data: (await uniswapV2Helper01.populateTransaction._addLiquidity(
                     tokenA,
                     tokenB,
                     amountADesired,
                     amountBDesired,
-                    amountAMin,
-                    amountBMin,
+                    0,
+                    0,
+                    to,
+                    to
                 )).data,
-            }, {
-                inputs: [{
-                    mode: TRANSFER,
-                    eip: 20,
-                    token: tokenA,
-                    id: 0,
-                    amountSource: 32,             // first item of _addLiquidity results
-                    amountInMax: amountADesired,
-                    recipient: uniswapPool.address,
-                }, {
-                    mode: TRANSFER,
-                    eip: 20,
-                    token: tokenB,
-                    id: 0,
-                    amountSource: 64,             // second item of _addLiquidity results
-                    amountInMax: amountBDesired,
-                    recipient: uniswapPool.address,
-                }],
-                flags: 0,
-                code: uniswapPool.address,
-                data: (await uniswapPool.populateTransaction.mint(to)).data,
             }]);
-        });
-        it("Deposit WETH and transfer them out", async function () {
-            const { utr, weth, otherAccount } = await loadFixture(scenario.fixture);
-            const someRecipient = otherAccount.address;
-            // sample code to deposit WETH and transfer them out
-            await utr.exec([{
-                eip: 20,
-                token: weth.address,
-                id: 0,
-                amountOutMin: 1,
-                recipient: someRecipient,
-            }], [{
-                inputs: [{
-                    mode: CALL_VALUE,
-                    eip: 0, // ETH
-                    token: AddressZero,
-                    id: 0,
-                    amountInMax: 123,
-                    amountSource: AMOUNT_EXACT,
-                    recipient: AddressZero, // pass it as the value for the next output action
-                }],
-                flags: 0,
-                code: weth.address,
-                data: (await weth.populateTransaction.deposit()).data,    // WETH.deposit returns WETH token to the UTR contract
-            }, {
-                inputs: [{
-                    mode: TRANSFER + FROM_ROUTER,
-                    eip: 20,
-                    token: weth.address,
-                    id: 0,
-                    amountInMax: 123,
-                    amountSource: AMOUNT_ALL,   // entire WETH balance of this UTR contract
-                    recipient: someRecipient,
-                }],
-                // ... continue to use WETH in SomeRecipient
-                flags: 0,
-                code: AddressZero,
-                data: '0x',
-            }], { value: 123 });
-            expect(await weth.balanceOf(someRecipient)).to.equal(123);
         });
         it("Adapter contract for WETH", async function () {
             const { utr, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
@@ -244,8 +180,7 @@ scenarios.forEach(function (scenario) {
                     eip: 0,                 // ETH
                     token: AddressZero,
                     id: 0,
-                    amountInMax: 123,
-                    amountSource: AMOUNT_EXACT,
+                    amountIn: 123,
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
                 flags: 0,

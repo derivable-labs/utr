@@ -2,15 +2,32 @@
 pragma solidity =0.6.6;
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+
+import "hardhat/console.sol";
+
+interface IUniversalTokenRouter {
+    function pay(
+        address sender,
+        address recipient,
+        uint eip,
+        address token,
+        uint id,
+        uint amount
+    ) external;
+}
+
 
 contract UniswapV2Helper01 {
     address public immutable factory;
     address public immutable WETH;
+    address public immutable UTR;
 
-    constructor(address _factory, address _WETH) public {
+    constructor(address _factory, address _WETH, address _UTR) public {
         factory = _factory;
         WETH = _WETH;
+        UTR = _UTR;
     }
 
     modifier ensure(uint256 deadline) {
@@ -57,6 +74,28 @@ contract UniswapV2Helper01 {
         _swap(amounts, path, to);
     }
 
+    
+    function swapTokensForTokensExact(
+        uint256 amountInMax,
+        uint256 amountOut,
+        address[] calldata path,
+        address payer,
+        address to,
+        uint256 deadline
+    ) external virtual ensure(deadline) returns (uint256[] memory amounts) {
+        amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
+        require(
+            amounts[0] <= amountInMax,
+            "UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT"
+        );
+        /* This function does what UniswapV2Router01.swapExactTokensForTokens does, without the token transfer part */
+        // TransferHelper.safeTransferFrom(
+        //     path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
+        // );
+        pay(payer, path[0], UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]);
+        _swap(amounts, path, to);
+    }
+
     /* This function accepts the uint[] amounts as the last bytes param,
     decode and pass to the internal function _swap of UniswapV2Helper01 */
     function swap(
@@ -74,11 +113,14 @@ contract UniswapV2Helper01 {
         uint256 amountADesired,
         uint256 amountBDesired,
         uint256 amountAMin,
-        uint256 amountBMin
+        uint256 amountBMin,
+        address payer,
+        address receipent
     ) external virtual returns (uint256 amountA, uint256 amountB) {
         // create the pair if it doesn't exist yet
-        if (IUniswapV2Factory(factory).getPair(tokenA, tokenB) == address(0)) {
-            IUniswapV2Factory(factory).createPair(tokenA, tokenB);
+        address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+        if (pair == address(0)) {
+            pair = IUniswapV2Factory(factory).createPair(tokenA, tokenB);
         }
         (uint256 reserveA, uint256 reserveB) = UniswapV2Library.getReserves(
             factory,
@@ -113,6 +155,13 @@ contract UniswapV2Helper01 {
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
         }
+        pay(payer, tokenA, pair, amountA);
+        pay(payer, tokenB, pair, amountB);
+        IUniswapV2Pair(pair).mint(receipent);
+    }
+
+    function pay(address payer, address token, address receipent, uint amount) internal {
+        IUniversalTokenRouter(UTR).pay(payer, receipent, 20, token, 0, amount);
     }
 
     function getAmountsIn(uint256 amountOut, address[] memory path)
