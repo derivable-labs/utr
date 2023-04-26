@@ -108,3 +108,7 @@ node_modules
 #Hardhat files
 cache
 artifacts
+
+# OS generated files
+.DS_Store
+.DS_Store?

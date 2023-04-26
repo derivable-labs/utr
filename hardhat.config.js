@@ -73,6 +73,22 @@ module.exports = {
             timeout: 900000,
             chainId: 56
         },
+        arbmainnet: {
+            url: process.env.ARB_MAINNET_PROVIDER ?? 'https://arb1.arbitrum.io/rpc',
+            accounts: [
+                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 900000,
+            chainId: 42161
+        },
+        arbtestnet: {
+            url: process.env.ARB_TESTNET_PROVIDER ?? 'https://endpoints.omniatech.io/v1/arbitrum/goerli/public',
+            accounts: [
+                process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 20000,
+            chainId: 421613
+        }
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
