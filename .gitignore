@@ -107,7 +107,9 @@ node_modules
 
 #Hardhat files
 cache
+cache-zk
 artifacts
+artifacts-zk
 
 # OS generated files
 .DS_Store

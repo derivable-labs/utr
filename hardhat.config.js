@@ -2,10 +2,13 @@
 const dotenv = require("dotenv");
 dotenv.config({ path: __dirname + "/.env" });
 
+require("@matterlabs/hardhat-zksync-deploy");
+require("@matterlabs/hardhat-zksync-solc");
+require("@matterlabs/hardhat-zksync-verify");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-gas-reporter");
-require("hardhat-contract-sizer");
+// require("hardhat-contract-sizer");
 
 const DEFAULT_COMPILER_SETTINGS = {
     version: '0.7.6',
@@ -22,7 +25,12 @@ const DEFAULT_COMPILER_SETTINGS = {
 }
 
 module.exports = {
-    defaultNetwork: 'hardhat',
+    zksolc: {
+        version: "1.3.10",
+        compilerSource: "binary",
+        settings: {},
+    },
+    defaultNetwork: 'zksynctestnet',
     solidity: {
         compilers: [
             {
@@ -80,6 +88,15 @@ module.exports = {
             ],
             timeout: 20000,
             chainId: 421613
+        },
+        zksynctestnet: {
+            url: process.env.ZKSYNC_TESTNET_PROVIDER ?? 'https://zksync2-testnet.zksync.dev',
+            accounts: [
+                process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 20000,
+            chainId: 280,
+            zksync: true
         },
         bsc: {
             url: process.env.BSC_MAINNET_PROVIDER ?? 'https://bsc-dataseed3.binance.org/',
