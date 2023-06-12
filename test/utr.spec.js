@@ -2,6 +2,7 @@ const {
     time,
     loadFixture,
 } = require("@nomicfoundation/hardhat-network-helpers");
+const { makeInterfaceId } = require('@openzeppelin/test-helpers');
 const chai = require("chai");
 const { solidity } = require("ethereum-waffle");
 chai.use(solidity);
@@ -249,3 +250,37 @@ scenarios.forEach(function (scenario) {
         });
     });
 });
+shouldSupportInterfaces(['UniversalTokenRouter', 'ERC165'])
+function shouldSupportInterfaces(interfaces = []) {
+    const INTERFACES = {
+        ERC165: ['supportsInterface(bytes4)'],
+        UniversalTokenRouter: [
+            'exec((address,uint256,address,uint256,uint256)[],((uint256,address,uint256,address,uint256,uint256)[],address,bytes)[])',
+            'pay(address,address,uint256,address,uint256,uint256)',
+            'discard(address,uint256,address,uint256,uint256)'
+        ],
+    }
+    const INTERFACE_IDS = {};
+    for (const k of Object.getOwnPropertyNames(INTERFACES)) {
+        INTERFACE_IDS[k] = makeInterfaceId.ERC165(INTERFACES[k]);
+    }
+    describe('ERC165', function () {
+        beforeEach(async function () {
+            const {utr} = await loadFixture(scenarios[0].fixture);;
+            this.contractUnderTest = utr;
+        });
+        it('supportsInterface uses less than 30k gas', async function () {
+            for (const k of interfaces) {
+                const interfaceId = INTERFACE_IDS[k] ?? k;
+                expect(await this.contractUnderTest.estimateGas.supportsInterface(interfaceId)).to.be.lte(30000);
+            }
+        });
+
+        it('all interfaces are supported', async function () {
+            for (const k of interfaces) {
+                const interfaceId = INTERFACE_IDS[k] ?? k;
+                expect(await this.contractUnderTest.supportsInterface(interfaceId)).to.equal(true, `does not support ${k}`);
+            }
+        });
+    })
+}
