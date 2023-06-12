@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
 struct Output {
     address recipient;
     uint eip;           // token standard: 0 for ETH or EIP number
@@ -24,7 +26,7 @@ struct Action {
     bytes data;         // contract input data
 }
 
-interface IUniversalTokenRouter {
+interface IUniversalTokenRouter is IERC165 {
     function exec(
         Output[] memory outputs,
         Action[] memory actions

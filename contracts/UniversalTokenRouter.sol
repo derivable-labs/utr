@@ -4,10 +4,11 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
-contract UniversalTokenRouter is IUniversalTokenRouter {
+contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     uint constant PAYMENT       = 0;
     uint constant TRANSFER      = 1;
     uint constant CALL_VALUE    = 2;
@@ -18,6 +19,13 @@ contract UniversalTokenRouter is IUniversalTokenRouter {
 
     // non-persistent in-transaction pending payments
     mapping(bytes32 => uint) t_payments;
+
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return
+            interfaceId == type(IUniversalTokenRouter).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
