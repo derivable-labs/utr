@@ -69,9 +69,15 @@ async function scenario01() {
     const gameItem = await GameItem.deploy();
     await gameItem.deployed();
 
+    // deploy UTRAllowanceAdapter
+    const UTRAllowanceAdapter = await ethers.getContractFactory("UTRAllowanceAdapter");
+    const utraa = await UTRAllowanceAdapter.deploy();
+    await utraa.deployed();
+
     return {
         uniswapRouter,
         utr,
+        utraa,
         uniswapPool,
         uniswapV2Helper01,
         wethAdapter,
