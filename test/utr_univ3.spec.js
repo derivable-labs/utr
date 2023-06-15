@@ -9,13 +9,13 @@ const expect = chai.expect;
 const { ethers } = require("hardhat");
 const { bn } = require("./shared/utilities");
 const { AddressZero, MaxUint256 } = ethers.constants;
-const { scenario02 } = require("./shared/fixtures");
+const { scenario01 } = require("./shared/fixtures");
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
 
 const scenarios = [
-    { fixture: scenario02, fixtureName: "(ETH = 1500 BUSD)" },
+    { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
 const PAYMENT       = 0;

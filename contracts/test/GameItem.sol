@@ -30,4 +30,17 @@ contract GameItem is ERC721URIStorage {
             this.awardItem(player, tokenURI);
         }
     }
+
+    function upgradeItem(address player, uint256 id, string memory tokenURI)
+        public
+        returns (uint256)
+    {
+        uint256 newItemId = _tokenIds.current();
+        _burn(id);
+        _mint(player, newItemId);
+        _setTokenURI(newItemId, tokenURI);
+
+        _tokenIds.increment();
+        return newItemId;
+    }
 }

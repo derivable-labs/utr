@@ -69,46 +69,30 @@ async function scenario01() {
     const gameItem = await GameItem.deploy();
     await gameItem.deployed();
 
-    return {
-        uniswapRouter,
-        utr,
-        uniswapPool,
-        uniswapV2Helper01,
-        wethAdapter,
-        gameItem,
-        busd,
-        weth,
-        owner,
-        otherAccount
-    }
-}
+    // deploy nft1155
+    const GameItems = await ethers.getContractFactory("GameItems");
+    const gameItems = await GameItems.deploy();
+    await gameItems.deployed();
 
-async function scenario02() {
-    // Contracts are deployed using the first signer/account by default
-    const [owner, otherAccount] = await ethers.getSigners();
-    const signer = owner;
-    // weth test
-    const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
-    const WETH = new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
+    // deploy AllowanceAdapter
+    const AllowanceAdapter = await ethers.getContractFactory("AllowanceAdapter");
+    const adapter = await AllowanceAdapter.deploy();
+    await adapter.deployed();
+
     // uniswap factory
-    const compiledUniswapFactory = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
-    const Uniswapv3Factory = new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
+    const compiledUniswapv3Factory = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
+    const Uniswapv3Factory = new ethers.ContractFactory(compiledUniswapv3Factory.abi, compiledUniswapv3Factory.bytecode, signer);
     // uniswap router
     const compiledUniswapv3Router = require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json");
     const Uniswapv3Router = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer);
     // uniswap position manager
     const compiledUniswapv3PositionManager = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
     const Uniswapv3PositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer);
-    // erc20 factory
-    const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
-    const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
-    // setup uniswap
-    const usdc = await erc20Factory.deploy(numberToWei(100000000));
-    const weth = await WETH.deploy();
+    
     const uniswapv3Factory = await Uniswapv3Factory.deploy();
     const uniswapv3Router = await Uniswapv3Router.deploy(uniswapv3Factory.address, weth.address);
     const uniswapv3PositionManager = await Uniswapv3PositionManager.deploy(uniswapv3Factory.address, weth.address, '0x0000000000000000000000000000000000000000')
-    
+    const usdc = await erc20Factory.deploy(numberToWei(100000000));
     await usdc.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
     await weth.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
 
@@ -135,11 +119,6 @@ async function scenario02() {
         gasLimit: 30000000
     })
 
-    // deploy UniversalRouter
-    const UniversalRouter = await ethers.getContractFactory("UniversalTokenRouter");
-    const utr = await UniversalRouter.deploy();
-    await utr.deployed();
-
     // deploy helper
     const UniswapV3Helper = await ethers.getContractFactory("SwapHelper");
     const uniswapV3Helper = await UniswapV3Helper.deploy(
@@ -152,19 +131,26 @@ async function scenario02() {
     const poolAddress = await uniswapv3Factory.getPool(usdc.address, weth.address, 3000);
 
     return {
-        uniswapv3Router,
+        uniswapRouter,
         utr,
-        uniswapV3Helper,
-        usdc,
+        adapter,
+        uniswapPool,
+        uniswapV2Helper01,
+        wethAdapter,
+        gameItem,
+        gameItems,
+        busd,
         weth,
         owner,
         otherAccount,
         poolAddress,
-        uniswapv3PositionManager
+        uniswapV3Helper,
+        uniswapv3PositionManager,
+        uniswapv3Router,
+        usdc
     }
 }
 
 module.exports = {
     scenario01,
-    scenario02
 }
