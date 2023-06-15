@@ -8,11 +8,8 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 contract UTRAllowanceAdapter {
     uint constant EIP_ETH = 0;
-    uint constant ERC_721_BALANCE =
-        uint(keccak256("UTRAllowanceAdapter.ERC_721_BALANCE"));
 
     struct Input {
-        address recipient;
         uint eip;           // token standard: 0 for ETH or EIP number
         address token;      // token contract address
         uint id;            // token id for EIP721 and EIP1155
@@ -20,7 +17,6 @@ contract UTRAllowanceAdapter {
     }
 
     struct Output {
-        address recipient;
         uint eip;           // token standard: 0 for ETH or EIP number
         address token;      // token contract address
         uint id;            // token id for EIP721 and EIP1155
@@ -33,7 +29,8 @@ contract UTRAllowanceAdapter {
         Input[] memory inputs,
         address spender,
         bytes memory data,
-        Output[] memory outputs
+        Output[] memory outputs,
+        address recipient
     ) external payable {
         for (uint i = 0; i < inputs.length; ++i) {
             Input memory input = inputs[i];
@@ -54,14 +51,14 @@ contract UTRAllowanceAdapter {
             _approve(input.eip, input.token, input.id, spender, 0);
             uint leftOver = _balance(input.eip, input.token, input.id, address(this));
             if (leftOver > 0) {
-                _transfer(input.eip, input.token, input.id, leftOver, input.recipient);
+                _transfer(input.eip, input.token, input.id, leftOver, recipient);
             }
         }
         for (uint i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
             uint amountOut = _balance(output.eip, output.token, output.id, address(this));
             if (amountOut > 0) {
-                _transfer(output.eip, output.token, output.id, amountOut, output.recipient);
+                _transfer(output.eip, output.token, output.id, amountOut, recipient);
             }
         }
     }
@@ -107,9 +104,6 @@ contract UTRAllowanceAdapter {
             return IERC1155(token).balanceOf(account, id);
         }
         if (eip == 721) {
-            if (id == ERC_721_BALANCE) {
-                return IERC721(token).balanceOf(account);
-            }
             try IERC721(token).ownerOf(id) returns (address currentOwner) {
                 return currentOwner == account ? 1 : 0;
             } catch {
