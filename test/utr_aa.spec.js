@@ -308,5 +308,113 @@ scenarios.forEach(function (scenario) {
                 expect(busdChanged).gt(0)
             })
         })
+    
+        describe("ERC-721", function () {
+            it("input/output token", async function () {
+                const { utr, adapter, gameItem, owner } = await loadFixture(scenario.fixture)
+                await gameItem.setApprovalForAll(utr.address, true)
+                const tokenURI = "https://game.example/item.json"
+                const player = owner.address
+                // mint
+                await utr.exec([], [{
+                    inputs: [],
+                    flags: 0,
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
+                        [],
+                        gameItem.address,
+                        (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                        [
+                            {
+                                eip: 721,
+                                token: gameItem.address,
+                                id: 0,
+                            }
+                        ],
+                        player
+                    )).data,
+                }])
+                expect(await gameItem.ownerOf(0)).equal(player)
+                // burn --> mint
+                await utr.exec([], [{
+                    inputs: [{
+                        mode: TRANSFER,
+                        eip: 721,
+                        token: gameItem.address,
+                        id: 0,
+                        amountIn: 0,
+                        recipient: adapter.address,
+                    }],
+                    flags: 0,
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
+                        [
+                            {
+                                eip: 721,
+                                token: gameItem.address,
+                                id: 0,
+                                amountIn: 1,
+                            }
+                        ],
+                        gameItem.address,
+                        (await gameItem.populateTransaction.upgradeItem(player,0,tokenURI)).data,
+                        [
+                            {
+                                eip: 721,
+                                token: gameItem.address,
+                                id: 1,
+                            }
+                        ],
+                        player
+                    )).data,
+                }])
+                expect(await gameItem.balanceOf(adapter.address)).equal(0)
+                expect(await gameItem.ownerOf(1)).equal(player)
+            })
+        })
+
+        describe("ERC-1155", function () {
+            it("input/output token", async function () {
+                const { utr, adapter, gameItems, owner } = await loadFixture(scenario.fixture)
+                await gameItems.setApprovalForAll(utr.address, true)
+                const player = owner.address
+                // burn --> mint
+                await utr.exec([], [{
+                    inputs: [{
+                        mode: TRANSFER,
+                        eip: 1155,
+                        token: gameItems.address,
+                        id: 0,
+                        amountIn: 10,
+                        recipient: adapter.address,
+                    }],
+                    flags: 0,
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
+                        [
+                            {
+                                eip: 1155,
+                                token: gameItems.address,
+                                id: 0,
+                                amountIn: 10,
+                            }
+                        ],
+                        gameItems.address,
+                        (await gameItems.populateTransaction.swapItems(player,0,10,5)).data,
+                        [
+                            {
+                                eip: 1155,
+                                token: gameItems.address,
+                                id: 5,
+                            }
+                        ],
+                        player
+                    )).data,
+                }])
+                expect(await gameItems.balanceOf(adapter.address, 0)).equal(0)
+                expect(await gameItems.balanceOf(adapter.address, 5)).equal(0)
+                expect(await gameItems.balanceOf(player, 5)).equal(10)
+            })
+        })
     })
 })

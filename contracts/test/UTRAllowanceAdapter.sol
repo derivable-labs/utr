@@ -10,20 +10,49 @@ contract UTRAllowanceAdapter {
     uint constant EIP_ETH = 0;
 
     struct Input {
-        uint eip;           // token standard: 0 for ETH or EIP number
-        address token;      // token contract address
-        uint id;            // token id for EIP721 and EIP1155
+        uint eip; // token standard: 0 for ETH or EIP number
+        address token; // token contract address
+        uint id; // token id for EIP721 and EIP1155
         uint amountIn;
     }
 
     struct Output {
-        uint eip;           // token standard: 0 for ETH or EIP number
-        address token;      // token contract address
-        uint id;            // token id for EIP721 and EIP1155
+        uint eip; // token standard: 0 for ETH or EIP number
+        address token; // token contract address
+        uint id; // token id for EIP721 and EIP1155
     }
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external virtual returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    ) external virtual returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
+    ) external virtual returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
 
     function approveAndCall(
         Input[] memory inputs,
@@ -49,16 +78,38 @@ contract UTRAllowanceAdapter {
         for (uint i = 0; i < inputs.length; ++i) {
             Input memory input = inputs[i];
             _approve(input.eip, input.token, input.id, spender, 0);
-            uint leftOver = _balance(input.eip, input.token, input.id, address(this));
+            uint leftOver = _balance(
+                input.eip,
+                input.token,
+                input.id,
+                address(this)
+            );
             if (leftOver > 0) {
-                _transfer(input.eip, input.token, input.id, leftOver, recipient);
+                _transfer(
+                    input.eip,
+                    input.token,
+                    input.id,
+                    leftOver,
+                    recipient
+                );
             }
         }
         for (uint i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
-            uint amountOut = _balance(output.eip, output.token, output.id, address(this));
+            uint amountOut = _balance(
+                output.eip,
+                output.token,
+                output.id,
+                address(this)
+            );
             if (amountOut > 0) {
-                _transfer(output.eip, output.token, output.id, amountOut, recipient);
+                _transfer(
+                    output.eip,
+                    output.token,
+                    output.id,
+                    amountOut,
+                    recipient
+                );
             }
         }
     }
@@ -80,9 +131,17 @@ contract UTRAllowanceAdapter {
             }
         } else if (eip == 721) {
             if (allowance == 0) {
-                IERC721(token).approve(address(0), id);
+                try IERC721(token).ownerOf(id) {
+                    IERC721(token).approve(address(0), id);
+                } catch {
+                    return;
+                }
             } else {
-                IERC721(token).approve(spender, id);
+                try IERC721(token).ownerOf(id) {
+                    IERC721(token).approve(spender, id);
+                } catch {
+                    return;
+                }
             }
         } else if (eip == EIP_ETH) {
             return;
