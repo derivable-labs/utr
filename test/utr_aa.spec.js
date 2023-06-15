@@ -30,7 +30,7 @@ scenarios.forEach(function (scenario) {
     describe("UTR Allowance Adapter: " + scenario.fixtureName, function () {
         describe("ERC-20", function () {
             it("swapExactTokensForTokens uniswap v2", async function () {
-                const { utr, utraa, uniswapRouter, weth, busd, owner } = await loadFixture(scenario.fixture)
+                const { utr, adapter, uniswapRouter, weth, busd, owner } = await loadFixture(scenario.fixture)
                 await weth.approve(utr.address, MaxUint256)
                 await weth.deposit({ value: pe(100) })
                 const amountIn = 100
@@ -48,14 +48,14 @@ scenarios.forEach(function (scenario) {
                     flags: 0,
                     inputs: [{
                         mode: TRANSFER,
-                        recipient: utraa.address,
+                        recipient: adapter.address,
                         eip: 20,
                         token: path[0],
                         id: 0,
                         amountIn,
                     }],
-                    code: utraa.address,
-                    data: (await utraa.populateTransaction.approveAndCall(
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
                         [
                             {
                                 eip: 20,
@@ -82,12 +82,12 @@ scenarios.forEach(function (scenario) {
                 const busdChanged = busdAfter.sub(busdBefore)
                 expect(wethChanged).equal(amountIn)
                 expect(busdChanged).equal(149550)
-                expect(await weth.balanceOf(utraa.address)).equal(0)
-                expect(await busd.balanceOf(utraa.address)).equal(0)
+                expect(await weth.balanceOf(adapter.address)).equal(0)
+                expect(await busd.balanceOf(adapter.address)).equal(0)
             })
         
             it("deposit WETH", async function () {
-                const { utr, utraa, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
+                const { utr, adapter, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
                 const someRecipient = otherAccount.address
                 await utr.exec([], [{
                     inputs: [{
@@ -96,11 +96,11 @@ scenarios.forEach(function (scenario) {
                         token: AddressZero,
                         id: 0,
                         amountIn: 123,
-                        recipient: utraa.address,
+                        recipient: adapter.address,
                     }],
                     flags: 0,
-                    code: utraa.address,
-                    data: (await utraa.populateTransaction.approveAndCall(
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
                         [
                             {
                                 eip: 0,
@@ -122,10 +122,10 @@ scenarios.forEach(function (scenario) {
                     )).data,
                 }], { value: 123 })
                 expect(await weth.balanceOf(someRecipient)).equal(123)
-                expect(await weth.balanceOf(utraa.address)).equal(0)
+                expect(await weth.balanceOf(adapter.address)).equal(0)
             })
             it("withdraw WETH", async function () {
-                const { utr, utraa, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
+                const { utr, adapter, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
                 await weth.connect(otherAccount).deposit({ value: 100 })
                 await weth.connect(otherAccount).approve(utr.address, MaxUint256)
                 const ethBefore = await owner.getBalance()
@@ -136,11 +136,11 @@ scenarios.forEach(function (scenario) {
                         token: weth.address,
                         id: 0,
                         amountIn: 100,
-                        recipient: utraa.address,
+                        recipient: adapter.address,
                     }],
                     flags: 0,
-                    code: utraa.address,
-                    data: (await utraa.populateTransaction.approveAndCall(
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
                         [
                             {
                                 eip: 20,
@@ -167,7 +167,7 @@ scenarios.forEach(function (scenario) {
             })
     
             it("add liquidity uniswap v2", async function () {
-                const { utr, utraa, uniswapRouter, uniswapPool, busd, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
+                const { utr, adapter, uniswapRouter, uniswapPool, busd, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
                 await weth.approve(utr.address, MaxUint256)
                 await weth.deposit({ value: pe(100) })
                 await busd.approve(utr.address, MaxUint256)
@@ -188,18 +188,18 @@ scenarios.forEach(function (scenario) {
                         token: tokenA,
                         id: 0,
                         amountIn: amountADesired,
-                        recipient: utraa.address,
+                        recipient: adapter.address,
                     }, {
                         mode: TRANSFER,
                         eip: 20,
                         token: tokenB,
                         id: 0,
                         amountIn: amountBDesired,
-                        recipient: utraa.address,
+                        recipient: adapter.address,
                     }],
                     flags: 0,
-                    code: utraa.address,
-                    data: (await utraa.populateTransaction.approveAndCall(
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
                         [
                             {
                                 eip: 20,
@@ -222,7 +222,7 @@ scenarios.forEach(function (scenario) {
                             amountBDesired,
                             0,
                             0,
-                            utraa.address,
+                            adapter.address,
                             deadline
                         )).data,
                         [
@@ -242,7 +242,7 @@ scenarios.forEach(function (scenario) {
             })
     
             it("remove liquidity uniswap v2", async function () {
-                const { utr, utraa, uniswapRouter, uniswapPool, busd, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
+                const { utr, adapter, uniswapRouter, uniswapPool, busd, weth, owner, otherAccount } = await loadFixture(scenario.fixture)
                 await uniswapPool.approve(utr.address, MaxUint256)
                 
                 const tokenA = busd.address
@@ -259,11 +259,11 @@ scenarios.forEach(function (scenario) {
                         token: uniswapPool.address,
                         id: 0,
                         amountIn: pe(1),
-                        recipient: utraa.address,
+                        recipient: adapter.address,
                     }],
                     flags: 0,
-                    code: utraa.address,
-                    data: (await utraa.populateTransaction.approveAndCall(
+                    code: adapter.address,
+                    data: (await adapter.populateTransaction.approveAndCall(
                         [
                             {
                                 eip: 20,
@@ -279,7 +279,7 @@ scenarios.forEach(function (scenario) {
                             pe(1),
                             0,
                             0,
-                            utraa.address,
+                            adapter.address,
                             deadline
                         )).data,
                         [
@@ -301,9 +301,9 @@ scenarios.forEach(function (scenario) {
                 const busdAfter = await busd.balanceOf(to)
                 const wethChanged = wethAfter.sub(wethBefore)
                 const busdChanged = busdAfter.sub(busdBefore)
-                expect(await uniswapPool.balanceOf(utraa.address)).eq(0)
-                expect(await weth.balanceOf(utraa.address)).eq(0)
-                expect(await busd.balanceOf(utraa.address)).eq(0)
+                expect(await uniswapPool.balanceOf(adapter.address)).eq(0)
+                expect(await weth.balanceOf(adapter.address)).eq(0)
+                expect(await busd.balanceOf(adapter.address)).eq(0)
                 expect(wethChanged).gt(0)
                 expect(busdChanged).gt(0)
             })

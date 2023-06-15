@@ -71,13 +71,13 @@ async function scenario01() {
 
     // deploy UTRAllowanceAdapter
     const UTRAllowanceAdapter = await ethers.getContractFactory("UTRAllowanceAdapter");
-    const utraa = await UTRAllowanceAdapter.deploy();
-    await utraa.deployed();
+    const adapter = await UTRAllowanceAdapter.deploy();
+    await adapter.deployed();
 
     return {
         uniswapRouter,
         utr,
-        utraa,
+        adapter,
         uniswapPool,
         uniswapV2Helper01,
         wethAdapter,
