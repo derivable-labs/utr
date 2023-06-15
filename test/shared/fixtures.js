@@ -74,9 +74,9 @@ async function scenario01() {
     const gameItems = await GameItems.deploy();
     await gameItems.deployed();
 
-    // deploy UTRAllowanceAdapter
-    const UTRAllowanceAdapter = await ethers.getContractFactory("UTRAllowanceAdapter");
-    const adapter = await UTRAllowanceAdapter.deploy();
+    // deploy AllowanceAdapter
+    const AllowanceAdapter = await ethers.getContractFactory("AllowanceAdapter");
+    const adapter = await AllowanceAdapter.deploy();
     await adapter.deployed();
 
     // uniswap factory

@@ -24,7 +24,6 @@ const TRANSFER      = 1
 const CALL_VALUE    = 2
 
 const EIP_ETH = 0
-const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UTRAllowanceAdapter.ERC_721_BALANCE"))
 
 scenarios.forEach(function (scenario) {
     describe("UTR Allowance Adapter: " + scenario.fixtureName, function () {
@@ -92,7 +91,7 @@ scenarios.forEach(function (scenario) {
                 await utr.exec([], [{
                     inputs: [{
                         mode: CALL_VALUE,
-                        eip: 0,                 // ETH
+                        eip: EIP_ETH,                 // ETH
                         token: AddressZero,
                         id: 0,
                         amountIn: 123,
@@ -103,7 +102,7 @@ scenarios.forEach(function (scenario) {
                     data: (await adapter.populateTransaction.approveAndCall(
                         [
                             {
-                                eip: 0,
+                                eip: EIP_ETH,
                                 token: AddressZero,
                                 id: 0,
                                 amountIn: 123,
@@ -153,7 +152,7 @@ scenarios.forEach(function (scenario) {
                         (await weth.populateTransaction.withdraw(100)).data,
                         [
                             {
-                                eip: 0,
+                                eip: EIP_ETH,
                                 token: AddressZero,
                                 id: 0,
                             }

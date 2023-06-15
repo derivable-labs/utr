@@ -4,9 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
-contract UTRAllowanceAdapter {
+contract AllowanceAdapter is ReentrancyGuard {
     uint constant EIP_ETH = 0;
 
     struct Input {
@@ -60,7 +61,7 @@ contract UTRAllowanceAdapter {
         bytes memory data,
         Output[] memory outputs,
         address recipient
-    ) external payable {
+    ) external payable nonReentrant {
         for (uint i = 0; i < inputs.length; ++i) {
             Input memory input = inputs[i];
             _approve(input.eip, input.token, input.id, spender, input.amountIn);
@@ -146,7 +147,7 @@ contract UTRAllowanceAdapter {
         } else if (eip == EIP_ETH) {
             return;
         } else {
-            revert("UTRAllowanceAdapter: INVALID_EIP");
+            revert("AllowanceAdapter: INVALID_EIP");
         }
     }
 
@@ -172,7 +173,7 @@ contract UTRAllowanceAdapter {
         if (eip == EIP_ETH) {
             return account.balance;
         }
-        revert("UTRAllowanceAdapter: INVALID_EIP");
+        revert("AllowanceAdapter: INVALID_EIP");
     }
 
     function _transfer(
@@ -197,7 +198,7 @@ contract UTRAllowanceAdapter {
         } else if (eip == EIP_ETH) {
             TransferHelper.safeTransferETH(recipient, amount);
         } else {
-            revert("UTRAllowanceAdapter: INVALID_EIP");
+            revert("AllowanceAdapter: INVALID_EIP");
         }
     }
 }
