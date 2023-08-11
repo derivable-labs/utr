@@ -1,6 +1,5 @@
 const hre = require("hardhat");
 const ethers = hre.ethers
-require('dotenv').config();
 
 const opts = {
     gasLimit: 12000000
@@ -12,12 +11,12 @@ async function main() {
     const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
     const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json');
     // bsc
-    const url = process.env.ARB_MAINNET_PROVIDER
+    const url = hre.network.config.url
     // Connect to the network
     const provider = new ethers.providers.JsonRpcProvider(url);
     const singletonFactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
     const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider);
-    const wallet = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
+    const wallet = new ethers.Wallet(hre.network.config.accounts[0], provider);
     const contractWithSigner = contract.connect(wallet);
 
     try {

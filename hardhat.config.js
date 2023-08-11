@@ -89,6 +89,22 @@ module.exports = {
             timeout: 900000,
             chainId: 56
         },
+        basetestnet: {
+            url: process.env.BASE_TESTNET_PROVIDER ?? 'https://goerli.base.org',
+            accounts: [
+                process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 20000,
+            chainId: 84531
+        },
+        basemainnet: {
+            url: process.env.BASE_MAINNET_PROVIDER ?? 'https://mainnet.base.org',
+            accounts: [
+                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 20000,
+            chainId: 8453
+        },
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
