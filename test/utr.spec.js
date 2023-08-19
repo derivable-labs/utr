@@ -40,6 +40,73 @@ scenarios.forEach(function (scenario) {
                 data: (await wethAdapter.populateTransaction.doRevert('some reason')).data,
             }], opts)).revertedWith('some reason');
         });
+        it("Invalid EIP", async function () {
+            const { utr, wethAdapter, weth, owner } = await loadFixture(scenario.fixture);
+            const INVALID_EIP = 200;
+            await expect(utr.exec([{
+                eip: 20,
+                token: weth.address,
+                id: 0,
+                amountOutMin: 1,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: TRANSFER,
+                    eip: INVALID_EIP,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
+            },
+            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+
+            await expect(utr.exec([{
+                eip: INVALID_EIP,
+                token: weth.address,
+                id: 0,
+                amountOutMin: 1,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
+            }
+            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+        });
+        it("discard", async function () {
+            const { utr, owner, weth } = await loadFixture(scenario.fixture);
+            await utr.discard(
+                owner.address,
+                20,
+                weth.address,
+                0,
+                0
+            )
+        })
+        // TODO: recheck
+        it("_transferToken safeTransfer", async function () {
+            const { utr, owner, weth, paymentTest } = await loadFixture(scenario.fixture);
+            await paymentTest.CallUTRPay(
+                utr.address,
+                owner.address,
+                20,
+                weth.address,
+                0,
+                0
+            )
+        })
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);

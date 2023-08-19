@@ -146,6 +146,13 @@ async function scenario01() {
     );
     await uniswapV3Helper.deployed();
 
+    // deploy PaymentTest
+    const PaymentTest = await ethers.getContractFactory("PaymentTest");
+    const paymentTest = await PaymentTest.deploy(
+        utr.address
+    );
+    await paymentTest.deployed();
+
     return {
         uniswapRouter,
         utr,
@@ -163,7 +170,8 @@ async function scenario01() {
         uniswapV3Helper,
         uniswapv3PositionManager,
         uniswapv3Router,
-        usdc
+        usdc,
+        paymentTest
     }
 }
 

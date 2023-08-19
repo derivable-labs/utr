@@ -150,9 +150,6 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             IERC1155(token).safeTransferFrom(sender, recipient, id, amount, "");
         } else if (eip == 721) {
             IERC721(token).safeTransferFrom(sender, recipient, id);
-        } else if (eip == EIP_ETH) {
-            require(sender == address(this), 'UniversalTokenRouter: INVALID_ETH_SENDER');
-            TransferHelper.safeTransferETH(recipient, amount);
         } else {
             revert("UniversalTokenRouter: INVALID_EIP");
         }
