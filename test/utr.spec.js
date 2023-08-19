@@ -31,7 +31,6 @@ scenarios.forEach(function (scenario) {
         it("Contract revert", async function () {
             const { utr, wethAdapter } = await loadFixture(scenario.fixture);
             await expect(utr.exec([], [{
-                flags: 0,
                 inputs: [],
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.doRevert('some reason')).data,
@@ -58,7 +57,6 @@ scenarios.forEach(function (scenario) {
                 id: 0,
                 amountOutMin,
             }], [{
-                flags: 0,
                 inputs: [{
                     mode: TRANSFER,
                     recipient: uniswapPool.address,
@@ -150,7 +148,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: amountBDesired,
                     recipient: uniswapPool.address,
                 }],
-                flags: 0,
                 code: uniswapV2Helper01.address,
                 data: (await uniswapV2Helper01.populateTransaction._addLiquidity(
                     tokenA,
@@ -184,7 +181,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: 123,
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
-                flags: 0,
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.deposit(someRecipient)).data,    // WETH.deposit returns WETH token to the UTR contract
             },
@@ -205,7 +201,6 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                flags: 0,
                 code: gameItem.address,
                 data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
@@ -218,7 +213,6 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                flags: 1,
                 code: gameItem.address,
                 data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
@@ -231,7 +225,6 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                flags: 0,
                 code: gameItem.address,
                 data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
             }])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
@@ -243,7 +236,6 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                flags: 0,
                 code: gameItem.address,
                 data: (await gameItem.populateTransaction.awardItems(amount, player, tokenURI)).data,
             }]);

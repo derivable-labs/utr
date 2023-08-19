@@ -60,7 +60,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '2000',
                     recipient: poolAddress,
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactInput(
                     exactInputParams(weth, usdc, '2000', 0)
@@ -93,7 +92,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '2000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactInput(
                     exactInputParams(weth, usdc, '2000', 0)
@@ -133,7 +131,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '2000',
                     recipient: poolAddress, // pass it as the value for the next output action
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.multicall(
                     data
@@ -157,7 +154,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '1000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactInput(
                     exactInputParams(weth, usdc, '2000', 0)
@@ -184,7 +180,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '2000',
                     recipient: AddressZero, // pass it as the value for the next output action
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactInput(
                     exactInputParams(weth, usdc, '2000', 0)
@@ -215,7 +210,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '1000',
                     recipient: poolAddress,
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactInputSingle({
                     payer: owner.address,
@@ -252,7 +246,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '1600',
                     recipient: poolAddress,
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactOutput({
                     payer: owner.address,
@@ -284,7 +277,6 @@ scenarios.forEach(function (scenario) {
                     amountIn: '1600',
                     recipient: poolAddress,
                 }],
-                flags: 0,
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactOutputSingle({
                     payer: owner.address,

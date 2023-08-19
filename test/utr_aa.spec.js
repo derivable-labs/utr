@@ -44,7 +44,6 @@ scenarios.forEach(function (scenario) {
                 const wethBefore = await weth.balanceOf(to)
                 const busdBefore = await busd.balanceOf(to)
                 await utr.exec([], [{
-                    flags: 0,
                     inputs: [{
                         mode: TRANSFER,
                         recipient: adapter.address,
@@ -97,7 +96,6 @@ scenarios.forEach(function (scenario) {
                         amountIn: 123,
                         recipient: adapter.address,
                     }],
-                    flags: 0,
                     code: adapter.address,
                     data: (await adapter.populateTransaction.approveAndCall(
                         [
@@ -137,7 +135,6 @@ scenarios.forEach(function (scenario) {
                         amountIn: 100,
                         recipient: adapter.address,
                     }],
-                    flags: 0,
                     code: adapter.address,
                     data: (await adapter.populateTransaction.approveAndCall(
                         [
@@ -196,7 +193,6 @@ scenarios.forEach(function (scenario) {
                         amountIn: amountBDesired,
                         recipient: adapter.address,
                     }],
-                    flags: 0,
                     code: adapter.address,
                     data: (await adapter.populateTransaction.approveAndCall(
                         [
@@ -260,7 +256,6 @@ scenarios.forEach(function (scenario) {
                         amountIn: pe(1),
                         recipient: adapter.address,
                     }],
-                    flags: 0,
                     code: adapter.address,
                     data: (await adapter.populateTransaction.approveAndCall(
                         [
@@ -317,7 +312,6 @@ scenarios.forEach(function (scenario) {
                 // mint
                 await utr.exec([], [{
                     inputs: [],
-                    flags: 0,
                     code: adapter.address,
                     data: (await adapter.populateTransaction.approveAndCall(
                         [],
@@ -344,7 +338,6 @@ scenarios.forEach(function (scenario) {
                         amountIn: 0,
                         recipient: adapter.address,
                     }],
-                    flags: 0,
                     code: adapter.address,
                     data: (await adapter.populateTransaction.approveAndCall(
                         [
@@ -387,7 +380,6 @@ scenarios.forEach(function (scenario) {
                         amountIn: 10,
                         recipient: adapter.address,
                     }],
-                    flags: 0,
                     code: adapter.address,
                     data: (await adapter.populateTransaction.approveAndCall(
                         [
