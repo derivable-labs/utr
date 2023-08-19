@@ -19,6 +19,10 @@ const scenarios = [
     { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
 
+const opts = {
+    gasLimit: 30000000
+}
+
 const PAYMENT       = 0;
 const TRANSFER      = 1;
 const CALL_VALUE    = 2;
@@ -34,7 +38,7 @@ scenarios.forEach(function (scenario) {
                 inputs: [],
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.doRevert('some reason')).data,
-            }])).revertedWith('some reason');
+            }], opts)).revertedWith('some reason');
         });
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);

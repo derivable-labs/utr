@@ -34,7 +34,7 @@ scenarios.forEach(function (scenario) {
         function exactInputParams(tokenIn, tokenOut, amountIn, amountOutMin, payer = owner) {
             return {
                 payer: payer.address,
-                path: encodePath([tokenIn.address, tokenOut.address], [3000]),
+                path: encodePath([tokenIn.address, tokenOut.address], [500]),
                 recipient: owner.address,
                 deadline: new Date().getTime() + 100000,
                 amountIn,
@@ -44,7 +44,6 @@ scenarios.forEach(function (scenario) {
         it("weth -> usdc", async function () {
             await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(1) });
-
             await utr.exec([{
                 eip: 20,
                 token: usdc.address,
@@ -65,7 +64,6 @@ scenarios.forEach(function (scenario) {
                     exactInputParams(weth, usdc, '2000', 0)
                 )).data,
             }])
-
             await expect(utr.pay(
                 owner.address,
                 poolAddress,
@@ -107,15 +105,15 @@ scenarios.forEach(function (scenario) {
             await usdc.approve(utr.address, MaxUint256);
             const params = {
                 payer: owner.address,
-                path: encodePath([usdc.address, weth.address], [3000]),
+                path: encodePath([usdc.address, weth.address], [500]),
                 recipient: AddressZero,
                 deadline: new Date().getTime() + 100000,
-                amountIn: '1600',
-                amountOutMinimum: '1',
+                amountIn: '160000',
+                amountOutMinimum: '100',
             }
 
             const data = [uniswapV3Helper.interface.encodeFunctionData('exactInput', [params])]
-            data.push(uniswapV3Helper.interface.encodeFunctionData('unwrapWETH9', ['1000', owner.address]))
+            data.push(uniswapV3Helper.interface.encodeFunctionData('unwrapWETH9', ['100', owner.address]))
             await utr.exec([{
                 eip: 0,
                 token: AddressZero,
@@ -128,7 +126,7 @@ scenarios.forEach(function (scenario) {
                     eip: 20,
                     token: usdc.address,
                     id: 0,
-                    amountIn: '2000',
+                    amountIn: '160000',
                     recipient: poolAddress, // pass it as the value for the next output action
                 }],
                 code: uniswapV3Helper.address,
@@ -169,7 +167,7 @@ scenarios.forEach(function (scenario) {
                 eip: 20,
                 token: usdc.address,
                 id: 0,
-                amountOutMin: 2100,
+                amountOutMin: '3000000',
                 recipient: owner.address,
             }], [{
                 inputs: [{
@@ -215,7 +213,7 @@ scenarios.forEach(function (scenario) {
                     payer: owner.address,
                     tokenIn: weth.address,
                     tokenOut: usdc.address,
-                    fee: 3000,
+                    fee: 500,
                     sqrtPriceLimitX96: weth.address.toLowerCase() < usdc.address.toLowerCase()
                         ? bn('4295128740')
                         : bn('1461446703485210103287273052203988822378723970341'),
@@ -249,7 +247,7 @@ scenarios.forEach(function (scenario) {
                 code: uniswapV3Helper.address,
                 data: (await uniswapV3Helper.populateTransaction.exactOutput({
                     payer: owner.address,
-                    path: encodePath([usdc.address, weth.address], [3000]),
+                    path: encodePath([usdc.address, weth.address], [500]),
                     recipient: owner.address,
                     deadline: new Date().getTime() + 100000,
                     amountOut: '1',
@@ -282,7 +280,7 @@ scenarios.forEach(function (scenario) {
                     payer: owner.address,
                     tokenIn: weth.address,
                     tokenOut: usdc.address,
-                    fee: 3000,
+                    fee: 500,
                     sqrtPriceLimitX96: weth.address.toLowerCase() < usdc.address.toLowerCase()
                         ? bn('4295128740')
                         : bn('1461446703485210103287273052203988822378723970341'),

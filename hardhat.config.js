@@ -3,9 +3,9 @@ const dotenv = require("dotenv");
 dotenv.config({ path: __dirname + "/.env" });
 
 require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-etherscan");
 require("hardhat-gas-reporter");
 require("hardhat-contract-sizer");
+require("solidity-coverage");
 
 const DEFAULT_COMPILER_SETTINGS = {
     version: '0.7.6',
@@ -65,6 +65,22 @@ module.exports = {
         }
     },
     networks: {
+        hardhat: {
+            accounts: [
+                {
+                    privateKey: "0x0000000000000000000000000000000000000000000000000000000000000001",
+                    balance: "900000000000000000000000000000000000000",
+                },
+                {
+                    privateKey: '0x0000000000000000000000000000000000000000000000000000000000000002',
+                    balance: "900000000000000000000000000000000000000",
+                },
+                {
+                    privateKey: '0x0000000000000000000000000000000000000000000000000000000000000003',
+                    balance: "900000000000000000000000000000000000000",
+                },
+            ]
+        },
         arbitrum: {
             url: process.env.ARB_MAINNET_PROVIDER ?? 'https://arb1.arbitrum.io/rpc',
             accounts: [
