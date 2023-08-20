@@ -1,6 +1,6 @@
 // contracts/GameItem.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -23,10 +23,10 @@ contract GameItem is ERC721URIStorage {
         return newItemId;
     }
 
-    function awardItems(uint amount, address player, string memory tokenURI)
+    function awardItems(uint256 amount, address player, string memory tokenURI)
         public
     {
-        for (uint index = 0; index < amount; index++) {
+        for (uint256 index = 0; index < amount; index++) {
             this.awardItem(player, tokenURI);
         }
     }

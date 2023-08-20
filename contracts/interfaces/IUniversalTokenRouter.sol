@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 struct Output {
     address recipient;
-    uint eip;           // token standard: 0 for ETH or EIP number
+    uint256 eip;           // token standard: 0 for ETH or EIP number
     address token;      // token contract address
-    uint id;            // token id for EIP721 and EIP1155
-    uint amountOutMin;
+    uint256 id;            // token id for EIP721 and EIP1155
+    uint256 amountOutMin;
 }
 
 struct Input {
-    uint mode;
+    uint256 mode;
     address recipient;
-    uint eip;           // token standard: 0 for ETH or EIP number
+    uint256 eip;           // token standard: 0 for ETH or EIP number
     address token;      // token contract address
-    uint id;            // token id for EIP721 and EIP1155
-    uint amountIn;
+    uint256 id;            // token id for EIP721 and EIP1155
+    uint256 amountIn;
 }
 
 struct Action {
@@ -35,17 +35,17 @@ interface IUniversalTokenRouter is IERC165 {
     function pay(
         address sender,
         address recipient,
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
-        uint amount
+        uint256 id,
+        uint256 amount
     ) external;
 
     function discard(
         address sender,
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
-        uint amount
+        uint256 id,
+        uint256 amount
     ) external;
 }

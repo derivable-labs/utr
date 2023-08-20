@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "../interfaces/IUniversalTokenRouter.sol";
 
@@ -11,10 +11,10 @@ contract PaymentTest {
     function CallUTRPay(
         address sender,
         address recipient,
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
-        uint amount
+        uint256 id,
+        uint256 amount
     ) external {
         IUniversalTokenRouter(UTR).pay(sender, recipient, eip, token, id, amount);
     }

@@ -11,10 +11,10 @@ interface IUniversalTokenRouter {
     function pay(
         address sender,
         address recipient,
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
-        uint amount
+        uint256 id,
+        uint256 amount
     ) external;
 }
 
@@ -96,7 +96,7 @@ contract UniswapV2Helper01 {
         _swap(amounts, path, to);
     }
 
-    /* This function accepts the uint[] amounts as the last bytes param,
+    /* This function accepts the uint256[] amounts as the last bytes param,
     decode and pass to the internal function _swap of UniswapV2Helper01 */
     function swap(
         address[] calldata path,
@@ -160,7 +160,7 @@ contract UniswapV2Helper01 {
         IUniswapV2Pair(pair).mint(receipent);
     }
 
-    function pay(address payer, address token, address receipent, uint amount) internal {
+    function pay(address payer, address token, address receipent, uint256 amount) internal {
         IUniversalTokenRouter(UTR).pay(payer, receipent, 20, token, 0, amount);
     }
 

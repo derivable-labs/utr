@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -10,19 +10,19 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 contract AllowanceAdapter is ReentrancyGuard, ERC1155Holder, ERC721Holder {
-    uint constant EIP_ETH = 0;
+    uint256 constant EIP_ETH = 0;
 
     struct Input {
-        uint eip; // token standard: 0 for ETH or EIP number
+        uint256 eip; // token standard: 0 for ETH or EIP number
         address token; // token contract address
-        uint id; // token id for EIP721 and EIP1155
-        uint amountIn;
+        uint256 id; // token id for EIP721 and EIP1155
+        uint256 amountIn;
     }
 
     struct Output {
-        uint eip; // token standard: 0 for ETH or EIP number
+        uint256 eip; // token standard: 0 for ETH or EIP number
         address token; // token contract address
-        uint id; // token id for EIP721 and EIP1155
+        uint256 id; // token id for EIP721 and EIP1155
     }
 
     // accepting ETH for WETH.withdraw
@@ -35,7 +35,7 @@ contract AllowanceAdapter is ReentrancyGuard, ERC1155Holder, ERC721Holder {
         Output[] memory outputs,
         address recipient
     ) external payable nonReentrant {
-        for (uint i = 0; i < inputs.length; ++i) {
+        for (uint256 i = 0; i < inputs.length; ++i) {
             Input memory input = inputs[i];
             _approve(input.eip, input.token, input.id, spender, input.amountIn);
         }
@@ -49,10 +49,10 @@ contract AllowanceAdapter is ReentrancyGuard, ERC1155Holder, ERC721Holder {
             }
         }
 
-        for (uint i = 0; i < inputs.length; ++i) {
+        for (uint256 i = 0; i < inputs.length; ++i) {
             Input memory input = inputs[i];
             _approve(input.eip, input.token, input.id, spender, 0);
-            uint leftOver = _balance(
+            uint256 leftOver = _balance(
                 input.eip,
                 input.token,
                 input.id,
@@ -68,9 +68,9 @@ contract AllowanceAdapter is ReentrancyGuard, ERC1155Holder, ERC721Holder {
                 );
             }
         }
-        for (uint i = 0; i < outputs.length; ++i) {
+        for (uint256 i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
-            uint amountOut = _balance(
+            uint256 amountOut = _balance(
                 output.eip,
                 output.token,
                 output.id,
@@ -89,11 +89,11 @@ contract AllowanceAdapter is ReentrancyGuard, ERC1155Holder, ERC721Holder {
     }
 
     function _approve(
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
+        uint256 id,
         address spender,
-        uint allowance
+        uint256 allowance
     ) internal {
         if (eip == 20) {
             IERC20(token).approve(spender, allowance);
@@ -125,11 +125,11 @@ contract AllowanceAdapter is ReentrancyGuard, ERC1155Holder, ERC721Holder {
     }
 
     function _balance(
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
+        uint256 id,
         address account
-    ) internal view returns (uint) {
+    ) internal view returns (uint256) {
         if (eip == 20) {
             return IERC20(token).balanceOf(account);
         }
@@ -150,10 +150,10 @@ contract AllowanceAdapter is ReentrancyGuard, ERC1155Holder, ERC721Holder {
     }
 
     function _transfer(
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
-        uint amount,
+        uint256 id,
+        uint256 amount,
         address recipient
     ) internal {
         if (eip == 20) {

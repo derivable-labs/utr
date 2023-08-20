@@ -4,25 +4,25 @@ pragma abicoder v2;
 
 struct Output {
     address recipient;
-    uint eip;           // token standard: 0 for ETH or EIP number
+    uint256 eip;           // token standard: 0 for ETH or EIP number
     address token;      // token contract address
-    uint id;            // token id for EIP721 and EIP1155
-    uint amountOutMin;
+    uint256 id;            // token id for EIP721 and EIP1155
+    uint256 amountOutMin;
 }
 
 struct Input {
-    uint mode;
+    uint256 mode;
     address recipient;
-    uint eip;           // token standard: 0 for ETH or EIP number
+    uint256 eip;           // token standard: 0 for ETH or EIP number
     address token;      // token contract address
-    uint id;            // token id for EIP721 and EIP1155
-    uint amountInMax;
-    uint amountSource;  // where to get the actual amountIn
+    uint256 id;            // token id for EIP721 and EIP1155
+    uint256 amountInMax;
+    uint256 amountSource;  // where to get the actual amountIn
 }
 
 struct Action {
     Input[] inputs;
-    uint flags;
+    uint256 flags;
     address code;       // contract code address
     bytes data;         // contract input data
 }
@@ -36,9 +36,9 @@ interface IUniversalTokenRouter {
     function pay(
         address sender,
         address recipient,
-        uint eip,
+        uint256 eip,
         address token,
-        uint id,
-        uint amount
+        uint256 id,
+        uint256 amount
     ) external;
 }
