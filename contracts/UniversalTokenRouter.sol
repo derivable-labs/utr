@@ -141,11 +141,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         uint amount
     ) internal {
         if (eip == 20) {
-            if (sender == address(this)) {
-                TransferHelper.safeTransfer(token, recipient, amount);
-            } else {
                 TransferHelper.safeTransferFrom(token, sender, recipient, amount);
-            }
         } else if (eip == 1155) {
             IERC1155(token).safeTransferFrom(sender, recipient, id, amount, "");
         } else if (eip == 721) {
