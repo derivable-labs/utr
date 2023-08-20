@@ -17,7 +17,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
 
     uint constant ERC_721_BALANCE = uint(keccak256('UniversalTokenRouter.ERC_721_BALANCE'));
 
-    // non-persistent in-transaction pending payments
+    // transient pending payments
     mapping(bytes32 => uint) t_payments;
 
     // IERC165-supportsInterface
@@ -58,7 +58,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                 } else if (mode == TRANSFER) {
                     _transferToken(sender, input.recipient, input.eip, input.token, input.id, input.amountIn);
                 } else if (mode == CALL_VALUE) {
-                    // require(input.eip == EIP_ETH && input.id == 0, "UniversalTokenRouter: ETH_ONLY");
+                    // eip and id are ignored
                     value = input.amountIn;
                 }
             }
@@ -70,11 +70,11 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                     }
                 }
             }
-            // clear all in-transaction storages, allowances and left-overs
+            // clear all transient storages, allowances and left-overs
             for (uint j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
                 if (input.mode == PAYMENT) {
-                    // in-transaction storages
+                    // transient storages
                     bytes32 key = keccak256(abi.encodePacked(sender, input.recipient, input.eip, input.token, input.id));
                     delete t_payments[key];
                 }
@@ -141,7 +141,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         uint amount
     ) internal {
         if (eip == 20) {
-                TransferHelper.safeTransferFrom(token, sender, recipient, amount);
+            TransferHelper.safeTransferFrom(token, sender, recipient, amount);
         } else if (eip == 1155) {
             IERC1155(token).safeTransferFrom(sender, recipient, id, amount, "");
         } else if (eip == 721) {
