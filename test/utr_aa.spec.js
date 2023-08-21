@@ -329,7 +329,13 @@ scenarios.forEach(function (scenario) {
                 }])
                 expect(await gameItem.ownerOf(0)).equal(player)
                 // burn --> mint
-                await utr.exec([], [{
+                await utr.exec([{
+                    recipient: adapter.address,
+                    eip: 721,
+                    token: gameItem.address,
+                    id: 0,
+                    amountOutMin: 0
+                }], [{
                     inputs: [{
                         mode: TRANSFER,
                         eip: 721,
@@ -371,7 +377,13 @@ scenarios.forEach(function (scenario) {
                 await gameItems.setApprovalForAll(utr.address, true)
                 const player = owner.address
                 // burn --> mint
-                await utr.exec([], [{
+                await utr.exec([{
+                    recipient: player,
+                    eip: 1155,
+                    token: gameItems.address,
+                    id: 5,
+                    amountOutMin: 10
+                }], [{
                     inputs: [{
                         mode: TRANSFER,
                         eip: 1155,

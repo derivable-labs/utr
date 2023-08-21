@@ -8,7 +8,6 @@ const { solidity } = require("ethereum-waffle");
 chai.use(solidity);
 const expect = chai.expect;
 const { ethers } = require("hardhat");
-const { bn } = require("./shared/utilities");
 const { AddressZero, MaxUint256 } = ethers.constants;
 const { scenario01 } = require("./shared/fixtures");
 
@@ -18,6 +17,10 @@ const pe = (x) => ethers.utils.parseEther(String(x))
 const scenarios = [
     { fixture: scenario01, fixtureName: "(ETH = 1500 BUSD)" },
 ];
+
+const opts = {
+    gasLimit: 30000000
+}
 
 const PAYMENT       = 0;
 const TRANSFER      = 1;
@@ -34,8 +37,153 @@ scenarios.forEach(function (scenario) {
                 inputs: [],
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.doRevert('some reason')).data,
-            }])).revertedWith('some reason');
+            }], opts)).revertedWith('some reason');
         });
+        it("Invalid EIP", async function () {
+            const { utr, wethAdapter, weth, owner } = await loadFixture(scenario.fixture);
+            const INVALID_EIP = 200;
+            await expect(utr.exec([{
+                eip: 20,
+                token: weth.address,
+                id: 0,
+                amountOutMin: 1,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: TRANSFER,
+                    eip: INVALID_EIP,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
+            },
+            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+
+            await expect(utr.exec([{
+                eip: INVALID_EIP,
+                token: weth.address,
+                id: 0,
+                amountOutMin: 1,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
+            }
+            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+        });
+        it("discard", async function () {
+            const { utr, owner, weth } = await loadFixture(scenario.fixture);
+            await utr.discard(
+                owner.address,
+                20,
+                weth.address,
+                0,
+                0
+            )
+        })
+        it("OUTPUT_BALANCE_OVERFLOW", async function () {
+            const { utr, owner, weth, wethAdapter, erc20Factory } = await loadFixture(scenario.fixture);
+            const maxSupplyToken = await erc20Factory.deploy(MaxUint256);
+            await expect(utr.exec([{
+                eip: 20,
+                token: maxSupplyToken.address,
+                id: 0,
+                amountOutMin: 100,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
+            }
+            ], { value: 123, gasLimit: opts.gasLimit})).revertedWith('UniversalTokenRouter: OUTPUT_BALANCE_OVERFLOW');
+        })
+        it("INVALID_MODE", async function () {
+            const { utr, owner, weth, wethAdapter } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([{
+                eip: 20,
+                token: weth.address,
+                id: 0,
+                amountOutMin: 100,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: 3,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: []
+            }
+            ], { value: 123})).revertedWith('UniversalTokenRouter: INVALID_MODE');
+        })
+        it("action.data.length == 0", async function () {
+            const { utr, owner, weth, wethAdapter } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([{
+                eip: 20,
+                token: weth.address,
+                id: 0,
+                amountOutMin: 100,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: []
+            }
+            ], { value: 123, gasLimit: opts.gasLimit})).reverted;
+            await expect(utr.exec([{
+                eip: 20,
+                token: weth.address,
+                id: 0,
+                amountOutMin: 100,
+                recipient: owner.address,
+            }], [{
+                inputs: [{
+                    mode: TRANSFER,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 123,
+                    recipient: AddressZero,
+                }],
+                flags: 0,
+                code: wethAdapter.address,
+                data: []
+            }
+            ], { value: 123, gasLimit: opts.gasLimit})).reverted;
+        })
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);

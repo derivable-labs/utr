@@ -5,6 +5,12 @@ const opts = {
 }
 const pe = (x) => ethers.utils.parseEther(String(x));
 
+function encodeSqrtX96(reserve1, reserve0) {
+    return bn((Math.sqrt(reserve1 / reserve0) * 10 ** 12).toFixed(0))
+        .mul(bn(2).pow(96))
+        .div(10 ** 12)
+}
+
 // ETH = 1500 BUSD
 async function scenario01() {
     // Contracts are deployed using the first signer/account by default
@@ -89,36 +95,48 @@ async function scenario01() {
     const compiledUniswapv3PositionManager = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
     const Uniswapv3PositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer);
     
+    const usdc = await erc20Factory.deploy(numberToWei(100000000));
+
     const uniswapv3Factory = await Uniswapv3Factory.deploy();
     const uniswapv3Router = await Uniswapv3Router.deploy(uniswapv3Factory.address, weth.address);
     const uniswapv3PositionManager = await Uniswapv3PositionManager.deploy(uniswapv3Factory.address, weth.address, '0x0000000000000000000000000000000000000000')
-    const usdc = await erc20Factory.deploy(numberToWei(100000000));
+    await uniswapv3Factory.createPool(usdc.address, weth.address, 500)
+
+    const compiledUniswapPool = require("../compiled/UniswapV3Pool.json");
+    const poolAddress = await uniswapv3Factory.getPool(usdc.address, weth.address, 500)
+    const uniswapPair = new ethers.Contract(poolAddress, compiledUniswapPool.abi, signer);
+    
     await usdc.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
     await weth.approve(uniswapv3PositionManager.address, ethers.constants.MaxUint256);
 
-    await uniswapv3PositionManager.createAndInitializePoolIfNecessary(
-        usdc.address,
-        weth.address,
-        3000,
-        bn('10000000000').mul(bn(2).pow(96)).div('10000000000')
-    )
+    const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
+    const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
+    const a = await uniswapPair.initialize(initPriceX96)
+    a.wait(1);
+    // await time.increase(1000);
+    // await uniswapv3PositionManager.createAndInitializePoolIfNecessary(
+    //     usdc.address,
+    //     weth.address,
+    //     3000,
+    //     bn('1').mul(bn(2).pow(96)).div('1500'),
+    //     opts
+    // )
     await uniswapv3PositionManager.mint({
-        token0: usdc.address,
-        token1: weth.address,
-        fee: 3000,
-        tickLower: Math.ceil(-887272 / 60) * 60,
-        tickUpper: Math.floor(887272 / 60) * 60,
-        amount0Desired: '100000000000000000000',
-        amount1Desired: '100000000000000000000',
+        token0: quoteTokenIndex ? weth.address : usdc.address,
+        token1: quoteTokenIndex ? usdc.address : weth.address,
+        fee: 500,
+        tickLower: Math.ceil(-887272 / 10) * 10,
+        tickUpper: Math.floor(887272 / 10) * 10,
+        amount0Desired: quoteTokenIndex ? pe('100') : pe('150000'),
+        amount1Desired: quoteTokenIndex ? pe('150000') : pe('100'),
         amount0Min: 0,
         amount1Min: 0,
         recipient: owner.address,
         deadline: new Date().getTime() + 100000
     }, {
-        value: '100000000000000000000',
+        value: pe('100'),
         gasLimit: 30000000
     })
-
     // deploy helper
     const UniswapV3Helper = await ethers.getContractFactory("SwapHelper");
     const uniswapV3Helper = await UniswapV3Helper.deploy(
@@ -128,7 +146,12 @@ async function scenario01() {
     );
     await uniswapV3Helper.deployed();
 
-    const poolAddress = await uniswapv3Factory.getPool(usdc.address, weth.address, 3000);
+    // deploy PaymentTest
+    const PaymentTest = await ethers.getContractFactory("PaymentTest");
+    const paymentTest = await PaymentTest.deploy(
+        utr.address
+    );
+    await paymentTest.deployed();
 
     return {
         uniswapRouter,
@@ -147,7 +170,9 @@ async function scenario01() {
         uniswapV3Helper,
         uniswapv3PositionManager,
         uniswapv3Router,
-        usdc
+        usdc,
+        paymentTest,
+        erc20Factory
     }
 }
 
