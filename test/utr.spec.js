@@ -312,7 +312,6 @@ scenarios.forEach(function (scenario) {
         it("Adapter contract for WETH", async function () {
             const { utr, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);
-            await weth.approve(wethAdapter.address, MaxUint256);
             const someRecipient = otherAccount.address;
             await utr.exec([{
                 eip: 20,
@@ -334,6 +333,26 @@ scenarios.forEach(function (scenario) {
             },
                 // ... continue to use WETH in SomeRecipient
             ], { value: 123 });
+        });
+        it("WETH withdraw", async function () {
+            const { utr, weth, owner } = await loadFixture(scenario.fixture);
+            await weth.approve(utr.address, MaxUint256);
+            await weth.deposit({ value: pe(100) });
+            const balanceBefore = await owner.getBalance()
+            await utr.exec([], [{
+                inputs: [{
+                    mode: TRANSFER,
+                    eip: 20,                 
+                    token: weth.address,
+                    id: 0,
+                    amountIn: pe(1),
+                    recipient: utr.address, // pass it as the value for the next output action
+                }],
+                code: weth.address,
+                data: (await weth.populateTransaction.withdraw(pe(1))).data,    // WETH.deposit returns WETH token to the UTR contract
+            }]);
+            const balanceAfter = await owner.getBalance()
+            expect(fe(balanceAfter.sub(balanceBefore))).to.closeTo(1, 1e-4)
         });
         it("Output Token Verification - EIP-721", async function () {
             const { utr, gameItem, owner } = await loadFixture(scenario.fixture);
