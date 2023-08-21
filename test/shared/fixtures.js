@@ -171,7 +171,8 @@ async function scenario01() {
         uniswapv3PositionManager,
         uniswapv3Router,
         usdc,
-        paymentTest
+        paymentTest,
+        erc20Factory
     }
 }
 
