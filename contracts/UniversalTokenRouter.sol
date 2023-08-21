@@ -60,6 +60,8 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                 } else if (mode == CALL_VALUE) {
                     // eip and id are ignored
                     value = input.amountIn;
+                } else {
+                    revert('UniversalTokenRouter: INVALID_MODE');
                 }
             }
             if (action.data.length > 0) {
