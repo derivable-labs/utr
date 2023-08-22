@@ -8,7 +8,7 @@
     "prettier": "prettier --write **/*.sol",
     "compile": "hardhat compile",
     "build": "hardhat compile && cp artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json build/",
-    "test": "hardhat test --parallel",
+    "test": "hardhat test",
     "deploy": "node scripts/sf.deploy.js",
     "coverage": "hardhat coverage",
     "verify": "hardhat verify --network mainnet",
