@@ -32,20 +32,6 @@ interface IUniversalTokenRouter is IERC165 {
     Action[] memory actions
   ) external payable;
 
-  function pay(
-    address sender,
-    address recipient,
-    uint256 eip,
-    address token,
-    uint256 id,
-    uint256 amount
-  ) external;
-
-  function discard(
-    address sender,
-    uint256 eip,
-    address token,
-    uint256 id,
-    uint256 amount
-  ) external;
+  function pay(bytes memory payment, uint256 amount) external;
+  function discard(bytes memory payment, uint256 amount) external;
 }

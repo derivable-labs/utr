@@ -8,14 +8,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "hardhat/console.sol";
 
 interface IUniversalTokenRouter {
-    function pay(
-        address sender,
-        address recipient,
-        uint256 eip,
-        address token,
-        uint256 id,
-        uint256 amount
-    ) external;
+    function pay(bytes calldata payment, uint256 amount) external;
 }
 
 
@@ -161,7 +154,8 @@ contract UniswapV2Helper01 {
     }
 
     function pay(address payer, address token, address receipent, uint256 amount) internal {
-        IUniversalTokenRouter(UTR).pay(payer, receipent, 20, token, 0, amount);
+        bytes memory payment = abi.encode(payer, receipent, 20, token, 0);
+        IUniversalTokenRouter(UTR).pay(payment, amount);
     }
 
     function getAmountsIn(uint256 amountOut, address[] memory path)

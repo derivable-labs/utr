@@ -10,6 +10,7 @@ const expect = chai.expect;
 const { ethers } = require("hardhat");
 const { AddressZero, MaxUint256 } = ethers.constants;
 const { scenario01 } = require("./shared/fixtures");
+const { encodePayment } = require("./shared/utilities");
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -85,13 +86,10 @@ scenarios.forEach(function (scenario) {
             ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
         });
         it("discard", async function () {
-            const { utr, owner, weth } = await loadFixture(scenario.fixture);
+            const { utr, owner, weth, poolAddress } = await loadFixture(scenario.fixture);
             await utr.discard(
-                owner.address,
-                20,
-                weth.address,
+                encodePayment(owner.address, poolAddress, 20, weth.address, 0),
                 0,
-                0
             )
         })
         it("OUTPUT_BALANCE_OVERFLOW", async function () {
@@ -415,8 +413,8 @@ function shouldSupportInterfaces(interfaces = []) {
         ERC165: ['supportsInterface(bytes4)'],
         UniversalTokenRouter: [
             'exec((address,uint256,address,uint256,uint256)[],((uint256,address,uint256,address,uint256,uint256)[],address,bytes)[])',
-            'pay(address,address,uint256,address,uint256,uint256)',
-            'discard(address,uint256,address,uint256,uint256)'
+            'pay(bytes,uint256)',
+            'discard(bytes,uint256)'
         ],
     }
     const INTERFACE_IDS = {};
