@@ -49,11 +49,11 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                     // eip and id are ignored
                     value = input.amountIn;
                 } else {
-                    bytes memory payment = abi.encode(sender, input.recipient, input.eip, input.token, input.id);
                     if (mode == PAYMENT) {
-                        t_payments[keccak256(payment)] = input.amountIn;
+                        bytes32 key = keccak256(abi.encode(sender, input.recipient, input.eip, input.token, input.id));
+                        t_payments[key] = input.amountIn;
                     } else if (mode == TRANSFER) {
-                        _transferToken(payment, input.amountIn);
+                        _transferToken(sender, input.recipient, input.eip, input.token, input.id, input.amountIn);
                     } else {
                         revert('UniversalTokenRouter: INVALID_MODE');
                     }
@@ -95,7 +95,14 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     
     function pay(bytes memory payment, uint256 amount) external override {
         discard(payment, amount);
-        _transferToken(payment, amount);
+        (
+            address sender,
+            address recipient,
+            uint256 eip,
+            address token,
+            uint256 id
+        ) = abi.decode(payment, (address, address, uint256, address, uint256));
+        _transferToken(sender, recipient, eip, token, id, amount);
     }
 
     function discard(bytes memory payment, uint256 amount) public override {
@@ -113,15 +120,14 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             super.supportsInterface(interfaceId);
     }
 
-    function _transferToken(bytes memory payment, uint256 amount) internal {
-        (
-            address sender,
-            address recipient,
-            uint256 eip,
-            address token,
-            uint256 id
-        ) = abi.decode(payment, (address, address, uint256, address, uint256));
-
+    function _transferToken(
+        address sender,
+        address recipient,
+        uint256 eip,
+        address token,
+        uint256 id,
+        uint256 amount
+    ) internal {
         if (eip == 20) {
             TransferHelper.safeTransferFrom(token, sender, recipient, amount);
         } else if (eip == 1155) {
