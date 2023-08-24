@@ -72,7 +72,9 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                 Input memory input = action.inputs[j];
                 if (input.mode == PAYMENT) {
                     // transient storages
-                    bytes32 key = keccak256(abi.encodePacked(sender, input.recipient, input.eip, input.token, input.id));
+                    bytes32 key = keccak256(abi.encodePacked(
+                        sender, input.recipient, input.eip, input.token, input.id
+                    ));
                     delete t_payments[key];
                 }
             }
