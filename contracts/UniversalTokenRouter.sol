@@ -20,13 +20,13 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     // transient pending payments
     mapping(bytes32 => uint256) t_payments;
 
-    // accepting ETH for WETH.withdraw
+    // accepting ETH for user execution (e.g. WETH.withdraw)
     receive() external payable {}
 
     function exec(
         Output[] memory outputs,
         Action[] memory actions
-    ) override external payable {
+    ) external payable virtual override {
     unchecked {
         // track the expected balances before any action is executed
         for (uint256 i = 0; i < outputs.length; ++i) {
@@ -93,7 +93,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         }
     } }
     
-    function pay(bytes memory payment, uint256 amount) external override {
+    function pay(bytes memory payment, uint256 amount) external virtual override {
         discard(payment, amount);
         (
             address sender,
@@ -105,7 +105,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         _transferToken(sender, recipient, eip, token, id, amount);
     }
 
-    function discard(bytes memory payment, uint256 amount) public override {
+    function discard(bytes memory payment, uint256 amount) public virtual override {
         bytes32 key = keccak256(payment);
         require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_PAYMENT');
         unchecked {
@@ -127,7 +127,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         address token,
         uint256 id,
         uint256 amount
-    ) internal {
+    ) internal virtual {
         if (eip == 20) {
             TransferHelper.safeTransferFrom(token, sender, recipient, amount);
         } else if (eip == 1155) {
@@ -141,7 +141,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
 
     function _balanceOf(
         Output memory output
-    ) internal view returns (uint256 balance) {
+    ) internal view virtual returns (uint256 balance) {
         uint256 eip = output.eip;
         if (eip == 20) {
             return IERC20(output.token).balanceOf(output.recipient);
