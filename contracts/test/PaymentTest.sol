@@ -18,6 +18,7 @@ contract PaymentTest {
     uint256 id,
     uint256 amount
   ) external {
-    IUniversalTokenRouter(UTR).pay(sender, recipient, eip, token, id, amount);
+    bytes memory payment = abi.encode(sender, recipient, eip, token, id);
+    IUniversalTokenRouter(UTR).pay(payment, amount);
   }
 }

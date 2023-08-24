@@ -20,13 +20,13 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     // transient pending payments
     mapping(bytes32 => uint256) t_payments;
 
-    // accepting ETH for WETH.withdraw
+    // accepting ETH for user execution (e.g. WETH.withdraw)
     receive() external payable {}
 
     function exec(
         Output[] memory outputs,
         Action[] memory actions
-    ) override external payable {
+    ) external payable virtual override {
     unchecked {
         // track the expected balances before any action is executed
         for (uint256 i = 0; i < outputs.length; ++i) {
@@ -45,16 +45,18 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             for (uint256 j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
                 uint256 mode = input.mode;
-                if (mode == PAYMENT) {
-                    bytes32 key = keccak256(abi.encodePacked(sender, input.recipient, input.eip, input.token, input.id));
-                    t_payments[key] = input.amountIn;
-                } else if (mode == TRANSFER) {
-                    _transferToken(sender, input.recipient, input.eip, input.token, input.id, input.amountIn);
-                } else if (mode == CALL_VALUE) {
+                if (mode == CALL_VALUE) {
                     // eip and id are ignored
                     value = input.amountIn;
                 } else {
-                    revert('UniversalTokenRouter: INVALID_MODE');
+                    if (mode == PAYMENT) {
+                        bytes32 key = keccak256(abi.encode(sender, input.recipient, input.eip, input.token, input.id));
+                        t_payments[key] = input.amountIn;
+                    } else if (mode == TRANSFER) {
+                        _transferToken(sender, input.recipient, input.eip, input.token, input.id, input.amountIn);
+                    } else {
+                        revert('UniversalTokenRouter: INVALID_MODE');
+                    }
                 }
             }
             if (action.data.length > 0) {
@@ -91,26 +93,24 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         }
     } }
     
-    function pay(
-        address sender,
-        address recipient,
-        uint256 eip,
-        address token,
-        uint256 id,
-        uint256 amount
-    ) override external {
-        _reducePayment(sender, recipient, eip, token, id, amount);
+    function pay(bytes memory payment, uint256 amount) external virtual override {
+        discard(payment, amount);
+        (
+            address sender,
+            address recipient,
+            uint256 eip,
+            address token,
+            uint256 id
+        ) = abi.decode(payment, (address, address, uint256, address, uint256));
         _transferToken(sender, recipient, eip, token, id, amount);
     }
 
-    function discard(
-        address sender,
-        uint256 eip,
-        address token,
-        uint256 id,
-        uint256 amount
-    ) public override {
-        _reducePayment(sender, msg.sender, eip, token, id, amount);
+    function discard(bytes memory payment, uint256 amount) public virtual override {
+        bytes32 key = keccak256(payment);
+        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_PAYMENT');
+        unchecked {
+            t_payments[key] -= amount;
+        }
     }
 
     // IERC165-supportsInterface
@@ -120,20 +120,6 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             super.supportsInterface(interfaceId);
     }
 
-    function _reducePayment(
-        address sender,
-        address recipient,
-        uint256 eip,
-        address token,
-        uint256 id,
-        uint256 amount
-    ) internal {
-    unchecked {
-        bytes32 key = keccak256(abi.encodePacked(sender, recipient, eip, token, id));
-        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_PAYMENT');
-        t_payments[key] -= amount;
-    } }
-
     function _transferToken(
         address sender,
         address recipient,
@@ -141,7 +127,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         address token,
         uint256 id,
         uint256 amount
-    ) internal {
+    ) internal virtual {
         if (eip == 20) {
             TransferHelper.safeTransferFrom(token, sender, recipient, amount);
         } else if (eip == 1155) {
@@ -155,7 +141,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
 
     function _balanceOf(
         Output memory output
-    ) internal view returns (uint256 balance) {
+    ) internal view virtual returns (uint256 balance) {
         uint256 eip = output.eip;
         if (eip == 20) {
             return IERC20(output.token).balanceOf(output.recipient);

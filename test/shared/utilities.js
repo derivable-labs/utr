@@ -120,10 +120,18 @@ async function swapToSetPrice({ account, uniswapPool, uniswapRouter, quoteToken,
     await tx.wait(1)
 }
 
+function encodePayment(...args) {
+    return ethers.utils.defaultAbiCoder.encode(
+        ["address", "address", "uint256", "address", "uint256"],
+        [...args],
+    )
+}
+
 module.exports = {
     calculateSwapToPrice,
     weiToNumber,
     numberToWei,
     bn,
-    swapToSetPrice
+    swapToSetPrice,
+    encodePayment,
 }

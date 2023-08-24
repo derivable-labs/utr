@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle");
 chai.use(solidity);
 const expect = chai.expect;
 const { ethers } = require("hardhat");
-const { bn } = require("./shared/utilities");
+const { bn, encodePayment } = require("./shared/utilities");
 const { AddressZero, MaxUint256 } = ethers.constants;
 const { scenario01 } = require("./shared/fixtures");
 
@@ -65,11 +65,7 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }])
             await expect(utr.pay(
-                owner.address,
-                poolAddress,
-                20,
-                weth.address,
-                0,
+                encodePayment(owner.address, poolAddress, 20, weth.address, 0),
                 1,
             )).revertedWith('INSUFFICIENT_PAYMENT')
         });

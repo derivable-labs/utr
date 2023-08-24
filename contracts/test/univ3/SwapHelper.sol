@@ -63,7 +63,7 @@ contract SwapHelper is
     ) external override {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
-        (address tokenIn, address tokenOut, uint24 fee) = data.path.decodeFirstPool();
+        (address tokenIn, address tokenOut,) = data.path.decodeFirstPool();
 
         (bool isExactInput, uint256 amountToPay) =
             amount0Delta > 0
@@ -271,14 +271,14 @@ contract SwapHelper is
             TransferHelper.safeTransfer(token, recipient, value);
         } else {
             // pull payment
-            UTR.pay(
+            bytes memory payment = abi.encode(
                 payer,
                 recipient,
                 20,     // EIP
                 token,
-                0,      // id
-                value
+                0
             );
+            UTR.pay(payment, value);
         }
     }
 
