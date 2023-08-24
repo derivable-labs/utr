@@ -5,8 +5,6 @@ import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
-import "hardhat/console.sol";
-
 interface IUniversalTokenRouter {
     function pay(bytes calldata payment, uint256 amount) external;
 }
