@@ -9,6 +9,7 @@
     "compile": "hardhat compile",
     "build": "hardhat compile && cp artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json build/",
     "test": "hardhat test",
+    "lint": "hardhat check",
     "deploy": "node scripts/sf.deploy.js",
     "coverage": "hardhat coverage",
     "verify": "hardhat verify --network mainnet",
