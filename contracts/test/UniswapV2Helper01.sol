@@ -77,7 +77,7 @@ contract UniswapV2Helper01 {
         _swap(amounts, path, _to);
     }
 
-    function _addLiquidity(
+    function addLiquidity(
         address tokenA,
         address tokenB,
         uint256 amountADesired,
@@ -153,14 +153,5 @@ contract UniswapV2Helper01 {
             IUniswapV2Pair(UniswapV2Library.pairFor(factory, input, output))
                 .swap(amount0Out, amount1Out, to, new bytes(0));
         }
-    }
-
-    function getAmountsIn(uint256 amountOut, address[] memory path)
-        public
-        view
-        virtual
-        returns (uint256[] memory amounts)
-    {
-        return UniswapV2Library.getAmountsIn(factory, amountOut, path);
     }
 }
