@@ -28,6 +28,11 @@ contract SwapHelper is
     using Path for bytes;
     using SafeCast for uint256;
 
+    struct SwapCallbackData {
+        bytes path;
+        address payer;
+    }
+
     /// @dev Used as the placeholder value for amountInCached, because the computed amount in for an exact output swap
     /// can never actually be this value
     uint256 private constant DEFAULT_AMOUNT_IN_CACHED = type(uint256).max;
@@ -41,18 +46,8 @@ contract SwapHelper is
         UTR = IUniversalTokenRouter(_UTR);
     }
 
-    /// @dev Returns the pool for the given token pair and fee. The pool contract may or may not exist.
-    function getPool(
-        address tokenA,
-        address tokenB,
-        uint24 fee
-    ) private view returns (IUniswapV3Pool) {
-        return IUniswapV3Pool(PoolAddress.computeAddress(factory, PoolAddress.getPoolKey(tokenA, tokenB, fee)));
-    }
-
-    struct SwapCallbackData {
-        bytes path;
-        address payer;
+    receive() external payable {
+        require(msg.sender == WETH9, 'Not WETH9');
     }
 
     /// @inheritdoc IUniswapV3SwapCallback
@@ -82,34 +77,6 @@ contract SwapHelper is
                 pay(tokenIn, data.payer, msg.sender, amountToPay);
             }
         }
-    }
-
-    /// @dev Performs a single exact input swap
-    function exactInputInternal(
-        uint256 amountIn,
-        address recipient,
-        uint160 sqrtPriceLimitX96,
-        SwapCallbackData memory data
-    ) private returns (uint256 amountOut) {
-        // allow swapping to the router address with address 0
-        if (recipient == address(0)) recipient = address(this);
-
-        (address tokenIn, address tokenOut, uint24 fee) = data.path.decodeFirstPool();
-
-        bool zeroForOne = tokenIn < tokenOut;
-
-        (int256 amount0, int256 amount1) =
-            getPool(tokenIn, tokenOut, fee).swap(
-                recipient,
-                zeroForOne,
-                amountIn.toInt256(),
-                sqrtPriceLimitX96 == 0
-                    ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
-                    : sqrtPriceLimitX96,
-                abi.encode(data)
-            );
-
-        return uint256(-(zeroForOne ? amount1 : amount0));
     }
 
     /// @inheritdoc ISwapRouter
@@ -164,40 +131,6 @@ contract SwapHelper is
         }
 
         require(amountOut >= params.amountOutMinimum, 'Too little received');
-    }
-
-    /// @dev Performs a single exact output swap
-    function exactOutputInternal(
-        uint256 amountOut,
-        address recipient,
-        uint160 sqrtPriceLimitX96,
-        SwapCallbackData memory data
-    ) private returns (uint256 amountIn) {
-        // allow swapping to the router address with address 0
-        if (recipient == address(0)) recipient = address(this);
-
-        (address tokenOut, address tokenIn, uint24 fee) = data.path.decodeFirstPool();
-
-        bool zeroForOne = tokenIn < tokenOut;
-
-        (int256 amount0Delta, int256 amount1Delta) =
-            getPool(tokenIn, tokenOut, fee).swap(
-                recipient,
-                zeroForOne,
-                -amountOut.toInt256(),
-                sqrtPriceLimitX96 == 0
-                    ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
-                    : sqrtPriceLimitX96,
-                abi.encode(data)
-            );
-
-        uint256 amountOutReceived;
-        (amountIn, amountOutReceived) = zeroForOne
-            ? (uint256(amount0Delta), uint256(-amount1Delta))
-            : (uint256(amount1Delta), uint256(-amount0Delta));
-        // it's technically possible to not receive the full output amount,
-        // so if no price limit has been specified, require this possibility away
-        if (sqrtPriceLimitX96 == 0) require(amountOutReceived == amountOut);
     }
 
     /// @inheritdoc ISwapRouter
@@ -282,7 +215,74 @@ contract SwapHelper is
         }
     }
 
-    receive() external payable {
-        require(msg.sender == WETH9, 'Not WETH9');
+    /// @dev Performs a single exact input swap
+    function exactInputInternal(
+        uint256 amountIn,
+        address recipient,
+        uint160 sqrtPriceLimitX96,
+        SwapCallbackData memory data
+    ) private returns (uint256 amountOut) {
+        // allow swapping to the router address with address 0
+        if (recipient == address(0)) recipient = address(this);
+
+        (address tokenIn, address tokenOut, uint24 fee) = data.path.decodeFirstPool();
+
+        bool zeroForOne = tokenIn < tokenOut;
+
+        (int256 amount0, int256 amount1) =
+            getPool(tokenIn, tokenOut, fee).swap(
+                recipient,
+                zeroForOne,
+                amountIn.toInt256(),
+                sqrtPriceLimitX96 == 0
+                    ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
+                    : sqrtPriceLimitX96,
+                abi.encode(data)
+            );
+
+        return uint256(-(zeroForOne ? amount1 : amount0));
+    }
+
+    /// @dev Performs a single exact output swap
+    function exactOutputInternal(
+        uint256 amountOut,
+        address recipient,
+        uint160 sqrtPriceLimitX96,
+        SwapCallbackData memory data
+    ) private returns (uint256 amountIn) {
+        // allow swapping to the router address with address 0
+        if (recipient == address(0)) recipient = address(this);
+
+        (address tokenOut, address tokenIn, uint24 fee) = data.path.decodeFirstPool();
+
+        bool zeroForOne = tokenIn < tokenOut;
+
+        (int256 amount0Delta, int256 amount1Delta) =
+            getPool(tokenIn, tokenOut, fee).swap(
+                recipient,
+                zeroForOne,
+                -amountOut.toInt256(),
+                sqrtPriceLimitX96 == 0
+                    ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
+                    : sqrtPriceLimitX96,
+                abi.encode(data)
+            );
+
+        uint256 amountOutReceived;
+        (amountIn, amountOutReceived) = zeroForOne
+            ? (uint256(amount0Delta), uint256(-amount1Delta))
+            : (uint256(amount1Delta), uint256(-amount0Delta));
+        // it's technically possible to not receive the full output amount,
+        // so if no price limit has been specified, require this possibility away
+        if (sqrtPriceLimitX96 == 0) require(amountOutReceived == amountOut);
+    }
+
+    /// @dev Returns the pool for the given token pair and fee. The pool contract may or may not exist.
+    function getPool(
+        address tokenA,
+        address tokenB,
+        uint24 fee
+    ) private view returns (IUniswapV3Pool) {
+        return IUniswapV3Pool(PoolAddress.computeAddress(factory, PoolAddress.getPoolKey(tokenA, tokenB, fee)));
     }
 }

@@ -15,35 +15,15 @@ contract UniswapV2Helper01 {
     address public immutable WETH;
     address public immutable UTR;
 
-    constructor(address _factory, address _WETH, address _UTR) public {
-        factory = _factory;
-        WETH = _WETH;
-        UTR = _UTR;
-    }
-
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "UniswapV2Helper01: EXPIRED");
         _;
     }
 
-    function _swap(
-        uint256[] memory amounts,
-        address[] memory path,
-        address _to
-    ) internal virtual {
-        for (uint256 i; i < path.length - 1; i++) {
-            (address input, address output) = (path[i], path[i + 1]);
-            (address token0, ) = UniswapV2Library.sortTokens(input, output);
-            uint256 amountOut = amounts[i + 1];
-            (uint256 amount0Out, uint256 amount1Out) = input == token0
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-            address to = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, output, path[i + 2])
-                : _to;
-            IUniswapV2Pair(UniswapV2Library.pairFor(factory, input, output))
-                .swap(amount0Out, amount1Out, to, new bytes(0));
-        }
+    constructor(address _factory, address _WETH, address _UTR) public {
+        factory = _factory;
+        WETH = _WETH;
+        UTR = _UTR;
     }
 
     function swapExactTokensForTokens(
@@ -64,7 +44,6 @@ contract UniswapV2Helper01 {
         // );
         _swap(amounts, path, to);
     }
-
     
     function swapTokensForTokensExact(
         uint256 amountInMax,
@@ -98,7 +77,7 @@ contract UniswapV2Helper01 {
         _swap(amounts, path, _to);
     }
 
-    function _addLiquidity(
+    function addLiquidity(
         address tokenA,
         address tokenB,
         uint256 amountADesired,
@@ -156,12 +135,23 @@ contract UniswapV2Helper01 {
         IUniversalTokenRouter(UTR).pay(payment, amount);
     }
 
-    function getAmountsIn(uint256 amountOut, address[] memory path)
-        public
-        view
-        virtual
-        returns (uint256[] memory amounts)
-    {
-        return UniswapV2Library.getAmountsIn(factory, amountOut, path);
+    function _swap(
+        uint256[] memory amounts,
+        address[] memory path,
+        address _to
+    ) internal virtual {
+        for (uint256 i; i < path.length - 1; i++) {
+            (address input, address output) = (path[i], path[i + 1]);
+            (address token0, ) = UniswapV2Library.sortTokens(input, output);
+            uint256 amountOut = amounts[i + 1];
+            (uint256 amount0Out, uint256 amount1Out) = input == token0
+                ? (uint256(0), amountOut)
+                : (amountOut, uint256(0));
+            address to = i < path.length - 2
+                ? UniswapV2Library.pairFor(factory, output, path[i + 2])
+                : _to;
+            IUniswapV2Pair(UniswapV2Library.pairFor(factory, input, output))
+                .swap(amount0Out, amount1Out, to, new bytes(0));
+        }
     }
 }

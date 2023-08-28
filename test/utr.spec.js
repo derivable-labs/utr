@@ -295,7 +295,7 @@ scenarios.forEach(function (scenario) {
                     recipient: uniswapPool.address,
                 }],
                 code: uniswapV2Helper01.address,
-                data: (await uniswapV2Helper01.populateTransaction._addLiquidity(
+                data: (await uniswapV2Helper01.populateTransaction.addLiquidity(
                     tokenA,
                     tokenB,
                     amountADesired,

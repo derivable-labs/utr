@@ -6,18 +6,18 @@ import "@uniswap/v2-periphery/contracts/interfaces/IWETH.sol";
 
 // sample adapter contract for WETH
 contract WethAdapter {
-  address immutable WETH;
+    address immutable WETH;
 
-  constructor(address _weth) {
-    WETH = _weth;
-  }
+    constructor(address _weth) {
+        WETH = _weth;
+    }
 
-  function deposit(address recipient) external payable {
-    IWETH(WETH).deposit{ value: msg.value }();
-    TransferHelper.safeTransfer(WETH, recipient, msg.value);
-  }
+    function deposit(address recipient) external payable {
+        IWETH(WETH).deposit{value: msg.value}();
+        TransferHelper.safeTransfer(WETH, recipient, msg.value);
+    }
 
-  function doRevert(string memory reason) external pure {
-    revert(reason);
-  }
+    function doRevert(string memory reason) external pure {
+        revert(reason);
+    }
 }
