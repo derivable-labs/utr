@@ -7,6 +7,7 @@ require("@nomiclabs/hardhat-solhint");
 require("hardhat-gas-reporter");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
+require("@nomicfoundation/hardhat-verify");
 
 const DEFAULT_COMPILER_SETTINGS = {
     version: '0.7.6',
