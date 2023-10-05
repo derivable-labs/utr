@@ -106,7 +106,8 @@ module.exports = {
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
             ],
             timeout: 900000,
-            chainId: 56
+            chainId: 56,
+            gasPrice: 3e9
         },
         basetestnet: {
             url: process.env.BASE_TESTNET_PROVIDER ?? 'https://goerli.base.org',
@@ -126,7 +127,10 @@ module.exports = {
         },
     },
     etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY,
+        apiKey: {
+            ethereum: process.env.ETHERSCAN_API_KEY,
+            bsc: process.env.BSCSCAN_API_KEY,
+        }
     },
     contractSizer: {
         alphaSort: true,
