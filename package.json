@@ -10,11 +10,9 @@
     "build": "hardhat compile && cp artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json build/",
     "test": "hardhat test",
     "lint": "hardhat check",
-    "deploy": "node scripts/sf.deploy.js",
+    "deploy": "hardhat run scripts/sf.deploy.js",
     "coverage": "hardhat coverage",
-    "verify": "hardhat verify --network mainnet",
-    "testnet": "hardhat run --network testnet",
-    "mainnet": "hardhat run --network mainnet"
+    "verify": "hardhat verify"
   },
   "dependencies": {
     "@atixlabs/hardhat-time-n-mine": "^0.0.5",
