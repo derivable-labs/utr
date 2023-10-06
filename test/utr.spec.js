@@ -182,6 +182,65 @@ scenarios.forEach(function (scenario) {
             }
             ], { value: 123, gasLimit: opts.gasLimit})).reverted;
         })
+        it("action = utr.pay", async function () {
+            const { utr, owner, weth, otherAccount } = await loadFixture(scenario.fixture);
+            const value = pe(123)
+            await weth.deposit({ value })
+            await weth.approve(utr.address, MaxUint256)
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: utr.address,
+                data: (await utr.populateTransaction.pay(
+                    encodePayment(owner.address, otherAccount.address, 20, weth.address, 0),
+                    value,
+                )).data,
+            }])).revertedWith('INSUFFICIENT_PAYMENT')
+            await expect(utr.exec([], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountIn: value.sub(1),
+                    recipient: otherAccount.address,
+                }],
+                code: utr.address,
+                data: (await utr.populateTransaction.pay(
+                    encodePayment(owner.address, otherAccount.address, 20, weth.address, 0),
+                    value,
+                )).data,
+            }])).revertedWith('INSUFFICIENT_PAYMENT')
+            await utr.exec([], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountIn: value,
+                    recipient: otherAccount.address,
+                }],
+                code: utr.address,
+                data: (await utr.populateTransaction.pay(
+                    encodePayment(owner.address, otherAccount.address, 20, weth.address, 0),
+                    value,
+                )).data,
+            }])
+        })
+        it("action = token.transferFrom", async function () {
+            const { utr, owner, weth, otherAccount } = await loadFixture(scenario.fixture);
+            // const value = pe(123)
+            // await weth.deposit({ value })
+            // await weth.approve(utr.address, MaxUint256)
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: weth.address,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+        })
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);
