@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
+/// @title The implemetation of the EIP-6120.
+/// @author Derivable Labs
 contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     uint256 constant PAYMENT       = 0;
     uint256 constant TRANSFER      = 1;
@@ -17,12 +19,15 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
 
     uint256 constant ERC_721_BALANCE = uint256(keccak256('UniversalTokenRouter.ERC_721_BALANCE'));
 
-    // transient pending payments
+    /// @dev transient pending payments
     mapping(bytes32 => uint256) t_payments;
 
-    // accepting ETH for user execution (e.g. WETH.withdraw)
+    /// @dev accepting ETH for user execution (e.g. WETH.withdraw)
     receive() external payable {}
 
+    /// The main entry point of the router
+    /// @param outputs token behaviour for output verification
+    /// @param actions router actions and inputs for execution
     function exec(
         Output[] memory outputs,
         Action[] memory actions
@@ -95,6 +100,9 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         }
     } }
     
+    /// Spend the pending payment. Intended to be called from the input.action.
+    /// @param payment encoded payment data
+    /// @param amount token amount to pay with payment
     function pay(bytes memory payment, uint256 amount) external virtual override {
         discard(payment, amount);
         (
@@ -107,6 +115,10 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         _transferToken(sender, recipient, eip, token, id, amount);
     }
 
+    /// Discard a part of a pending payment. Can be called from the input.action
+    /// to verify the payment without transfering any token.
+    /// @param payment encoded payment data
+    /// @param amount token amount to pay with payment
     function discard(bytes memory payment, uint256 amount) public virtual override {
         bytes32 key = keccak256(payment);
         require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_PAYMENT');
