@@ -35,6 +35,9 @@ module.exports = {
                         enabled: true,
                         runs: 1000000,
                     },
+                    metadata: {
+                        bytecodeHash: 'none',
+                    },
                 },
             },
             {
@@ -43,6 +46,9 @@ module.exports = {
                     optimizer: {
                         enabled: true,
                         runs: 1000000,
+                    },
+                    metadata: {
+                        bytecodeHash: 'none',
                     },
                 },
             },
