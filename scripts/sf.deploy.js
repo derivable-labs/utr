@@ -6,8 +6,7 @@ const opts = {
 };
 async function main() {
     const initCodeUTR = require('../artifacts/contracts/UniversalTokenRouter.sol/UniversalTokenRouter.json').bytecode;
-    // UTR: 0x6120245B546F2F0ce439186cAae8181007366120
-    const salt = 2750646675
+    const salt = 0
     const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
     const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json');
     const { url, accounts, gasPrice } = hre.network.config
