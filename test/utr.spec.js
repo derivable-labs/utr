@@ -226,11 +226,12 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }])
         })
-        it("action = token.transferFrom", async function () {
+        it("action = tokenERC20/ERC721.transferFrom", async function () {
             const { utr, owner, weth, otherAccount } = await loadFixture(scenario.fixture);
             // const value = pe(123)
             // await weth.deposit({ value })
             // await weth.approve(utr.address, MaxUint256)
+
             await expect(utr.exec([], [{
                 inputs: [],
                 code: weth.address,
@@ -238,6 +239,108 @@ scenarios.forEach(function (scenario) {
                     owner.address,
                     otherAccount.address,
                     1,
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            // action.code == address(0)
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: AddressZero,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            // value > 0
+            await utr.exec([], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 1000,
+                    recipient: AddressZero,
+                }],
+                code: AddressZero,
+                data: [],
+            }], {
+                value: 1000
+            })
+            // action.data.length > 0
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: AddressZero,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            // action.code == address(0), action.data.length = 0, value = 0
+            await utr.exec([], [{
+                inputs: [],
+                code: AddressZero,
+                data: [],
+            }])
+        })
+        it("action = tokenERC1155.safeTransferFrom/safeBatchTransferFrom", async function () {
+            const { utr, owner, otherAccount, gameItems } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItems.address,
+                data: (await gameItems.populateTransaction.safeTransferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    0,
+                    1,
+                    '0x00'
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItems.address,
+                data: (await gameItems.populateTransaction.safeBatchTransferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    [0],
+                    [1],
+                    '0x00'
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+        })
+        it("action = tokenERC721.safeTransferFrom", async function () {
+            const { utr, owner, otherAccount, gameItem } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItem.address,
+                data: (await gameItem.populateTransaction["safeTransferFrom(address,address,uint256)"](
+                    owner.address,
+                    otherAccount.address,
+                    0
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItem.address,
+                data: (await gameItem.populateTransaction["safeTransferFrom(address,address,uint256,bytes)"](
+                    owner.address,
+                    otherAccount.address,
+                    0,
+                    "0x00"
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+        })
+        it("action = tokenERC777.safeTransferFrom", async function () {
+            const { utr, owner, otherAccount, gldToken } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gldToken.address,
+                data: (await gldToken.populateTransaction.operatorSend(
+                    owner.address,
+                    otherAccount.address,
+                    10,
+                    "0x00",
+                    "0x00"
                 )).data,
             }])).revertedWith('FUNCTION_BLOCKED')
         })
