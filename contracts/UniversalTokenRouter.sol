@@ -20,10 +20,20 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
 
     uint256 constant ERC_721_BALANCE = uint256(keccak256('UniversalTokenRouter.ERC_721_BALANCE'));
 
-    bytes4 constant ERC_721_SAFE_TRANSFER_FROM =
+    bytes4 constant IERC721_safeTransferFrom =
         bytes4(keccak256("safeTransferFrom(address,address,uint256)"));
-    bytes4 constant ERC_721_SAFE_TRANSFER_FROM_BYTES =
+    bytes4 constant IERC721_safeTransferFromWithBytes =
         bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes)"));
+
+    /// @dev IERC721.transferFrom has the same selector with IERC20
+    bytes32 immutable BLOCKED_SELECTORS =
+        bytes32(IERC20.transferFrom.selector)                   |
+        bytes32(IERC721_safeTransferFrom)                >>  32 |
+        bytes32(IERC721_safeTransferFromWithBytes)       >>  64 |
+        bytes32(IERC777.operatorSend.selector)           >>  96 |
+        bytes32(IERC777.operatorBurn.selector)           >> 128 |
+        bytes32(IERC1155.safeTransferFrom.selector)      >> 160 |
+        bytes32(IERC1155.safeBatchTransferFrom.selector) >> 192;
 
     /// @dev transient pending payments
     mapping(bytes32 => uint256) t_payments;
@@ -73,9 +83,9 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             if (action.code != address(0) || action.data.length > 0 || value > 0) {
                 if (action.data.length >= 4) {
                     _checkSelector(
-                        bytes4(action.data[0]) ^
-                        bytes4(action.data[1]) >> 8 ^
-                        bytes4(action.data[2]) >> 16 ^
+                        bytes4(action.data[0])       |
+                        bytes4(action.data[1]) >>  8 |
+                        bytes4(action.data[2]) >> 16 |
                         bytes4(action.data[3]) >> 24
                     );
                 }
@@ -86,7 +96,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                     }
                 }
             }
-            // clear all transient storages, allowances and left-overs
+            // clear all transient storages
             for (uint256 j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
                 if (input.mode == PAYMENT) {
@@ -193,17 +203,9 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         revert("UniversalTokenRouter: INVALID_EIP");
     }
 
-    function _checkSelector(bytes4 selector) internal pure {
-        require(
-            selector != IERC20.transferFrom.selector &&
-            // IERC721.transferFrom use the same selector with IERC20
-            selector != IERC1155.safeTransferFrom.selector &&
-            selector != IERC1155.safeBatchTransferFrom.selector &&
-            selector != ERC_721_SAFE_TRANSFER_FROM &&
-            selector != ERC_721_SAFE_TRANSFER_FROM_BYTES &&
-            selector != IERC777.operatorSend.selector &&
-            selector != IERC777.operatorBurn.selector,
-            "UniversalTokenRouter: FUNCTION_BLOCKED"
-        );
+    function _checkSelector(bytes4 selector) internal view {
+        for (bytes32 selectors = BLOCKED_SELECTORS; selectors != 0; selectors <<= 32) {
+            require(selector != bytes4(selectors), "UniversalTokenRouter: FUNCTION_BLOCKED");
+        }
     }
 }
