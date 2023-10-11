@@ -201,7 +201,8 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             selector != IERC1155.safeBatchTransferFrom.selector &&
             selector != ERC_721_SAFE_TRANSFER_FROM &&
             selector != ERC_721_SAFE_TRANSFER_FROM_BYTES &&
-            selector != IERC777.operatorSend.selector,
+            selector != IERC777.operatorSend.selector &&
+            selector != IERC777.operatorBurn.selector,
             "UniversalTokenRouter: FUNCTION_BLOCKED"
         );
     }

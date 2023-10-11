@@ -330,13 +330,23 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }])).revertedWith('FUNCTION_BLOCKED')
         })
-        it("action = tokenERC777.safeTransferFrom", async function () {
+        it("action = tokenERC777.operatorSend/operatorBurn", async function () {
             const { utr, owner, otherAccount, gldToken } = await loadFixture(scenario.fixture);
             await expect(utr.exec([], [{
                 inputs: [],
                 code: gldToken.address,
                 data: (await gldToken.populateTransaction.operatorSend(
                     owner.address,
+                    otherAccount.address,
+                    10,
+                    "0x00",
+                    "0x00"
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gldToken.address,
+                data: (await gldToken.populateTransaction.operatorBurn(
                     otherAccount.address,
                     10,
                     "0x00",
