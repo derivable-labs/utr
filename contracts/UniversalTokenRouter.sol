@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
@@ -199,7 +200,9 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             selector != IERC1155.safeTransferFrom.selector &&
             selector != IERC1155.safeBatchTransferFrom.selector &&
             selector != ERC_721_SAFE_TRANSFER_FROM &&
-            selector != ERC_721_SAFE_TRANSFER_FROM_BYTES,
+            selector != ERC_721_SAFE_TRANSFER_FROM_BYTES &&
+            selector != IERC777.operatorSend.selector &&
+            selector != IERC777.operatorBurn.selector,
             "UniversalTokenRouter: FUNCTION_BLOCKED"
         );
     }
