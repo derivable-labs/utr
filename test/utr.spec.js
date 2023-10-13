@@ -354,6 +354,60 @@ scenarios.forEach(function (scenario) {
                 )).data,
             }])).revertedWith('FUNCTION_BLOCKED')
         })
+        it("action = tokenERC1363.transferFromAndCall", async function () {
+            const { utr, owner, otherAccount } = await loadFixture(scenario.fixture);
+            // deploy erc1363 mock
+            const compiledERC1363Mock = require("./compiled/$ERC1363.json");
+            const ERC1363Mock = await new ethers.ContractFactory(compiledERC1363Mock.abi, compiledERC1363Mock.bytecode, owner);
+            const erc1363Mock = await ERC1363Mock.deploy("ERC 1363 Mock", "1363M");
+
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: erc1363Mock.address,
+                data: (await erc1363Mock.populateTransaction["transferFromAndCall(address,address,uint256)"](
+                    owner.address,
+                    otherAccount.address,
+                    10,
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: erc1363Mock.address,
+                data: (await erc1363Mock.populateTransaction["transferFromAndCall(address,address,uint256,bytes)"](
+                    owner.address,
+                    otherAccount.address,
+                    10,
+                    "0x00"
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+        })
+        it("custom selectors", async function () {
+            const { owner, gameItem } = await loadFixture(scenario.fixture);
+            const customSelector0 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("awardItem(address,string)")).substring(2, 10)
+            const customSelector1 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("awardItems(uint256,address,string)")).substring(2, 10)
+            const blockedSelectors = ('0x' + customSelector0 + customSelector1).padEnd(66, '0')
+            // deploy UniversalRouter
+            const UniversalRouter = await ethers.getContractFactory("UniversalTokenRouter");
+            const utr = await UniversalRouter.deploy(blockedSelectors);
+            await utr.deployed();
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItem.address,
+                data: (await gameItem.populateTransaction.awardItem(
+                    owner.address,
+                    "test",
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItem.address,
+                data: (await gameItem.populateTransaction.awardItems(
+                    1,
+                    owner.address,
+                    "test",
+                )).data,
+            }])).revertedWith('FUNCTION_BLOCKED')
+        })
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);
