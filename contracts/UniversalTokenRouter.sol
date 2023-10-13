@@ -3,8 +3,8 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
@@ -24,19 +24,42 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         bytes4(keccak256("safeTransferFrom(address,address,uint256)"));
     bytes4 constant IERC721_safeTransferFromWithBytes =
         bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes)"));
+    bytes4 constant IERC1363_transferFromAndCall =
+        bytes4(keccak256("transferFromAndCall(address,address,uint256)"));
+    bytes4 constant IERC1363_transferFromAndCallWithBytes =
+        bytes4(keccak256("transferFromAndCall(address,address,uint256,bytes)"));
 
-    /// @dev IERC721.transferFrom has the same selector with IERC20
-    bytes32 immutable BLOCKED_SELECTORS =
+    /// Pack all functions selectors that spend the token allowance to be
+    /// blocked from the action.data calls.
+    ///
+    /// IERC721.transferFrom has the same selector with IERC20
+    bytes32 constant BLOCKED_SELECTORS_0 =
         bytes32(IERC20.transferFrom.selector)                   |
         bytes32(IERC721_safeTransferFrom)                >>  32 |
         bytes32(IERC721_safeTransferFromWithBytes)       >>  64 |
         bytes32(IERC777.operatorSend.selector)           >>  96 |
         bytes32(IERC777.operatorBurn.selector)           >> 128 |
         bytes32(IERC1155.safeTransferFrom.selector)      >> 160 |
-        bytes32(IERC1155.safeBatchTransferFrom.selector) >> 192;
+        bytes32(IERC1155.safeBatchTransferFrom.selector) >> 192 |
+        bytes32(IERC1363_transferFromAndCall)            >> 224 ;
+    
+    /// IERC1363_transferFromAndCallWithBytes and up to 7 custom selectors
+    bytes32 immutable BLOCKED_SELECTORS_1;
 
     /// @dev transient pending payments
     mapping(bytes32 => uint256) t_payments;
+
+    /// Construct the UTR with optional custom function selectors to be blocked
+    /// from the action.data.
+    /// 
+    /// @param blockedSelectors up to 7 function selectors (4 bytes each),
+    /// and the last 4-bytes are discarded. These selectors can be added for
+    /// future token standard/extension functions that spend their allowances.
+    constructor(bytes32 blockedSelectors) {
+        BLOCKED_SELECTORS_1 =
+            bytes32(IERC1363_transferFromAndCallWithBytes) |
+            blockedSelectors >> 32;
+    }
 
     /// @dev accepting ETH for user execution (e.g. WETH.withdraw)
     receive() external payable {}
@@ -204,7 +227,10 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     }
 
     function _checkSelector(bytes4 selector) internal view {
-        for (bytes32 selectors = BLOCKED_SELECTORS; selectors != 0; selectors <<= 32) {
+        for (bytes32 selectors = BLOCKED_SELECTORS_0; selectors != 0; selectors <<= 32) {
+            require(selector != bytes4(selectors), "UniversalTokenRouter: FUNCTION_BLOCKED");
+        }
+        for (bytes32 selectors = BLOCKED_SELECTORS_1; selectors != 0; selectors <<= 32) {
             require(selector != bytes4(selectors), "UniversalTokenRouter: FUNCTION_BLOCKED");
         }
     }

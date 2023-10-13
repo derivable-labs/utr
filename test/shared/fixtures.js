@@ -1,6 +1,7 @@
 const { ethers } = require("hardhat");
 const { bn, numberToWei } = require("./utilities");
 const { ensureERC1820 } = require("./hardhat-erc1820");
+const { HashZero } = ethers.constants
 
 const opts = {
     gasLimit: 30000000
@@ -53,7 +54,7 @@ async function scenario01() {
 
     // deploy UniversalRouter
     const UniversalRouter = await ethers.getContractFactory("UniversalTokenRouter");
-    const utr = await UniversalRouter.deploy();
+    const utr = await UniversalRouter.deploy(HashZero);
     await utr.deployed();
 
     // deploy helper
