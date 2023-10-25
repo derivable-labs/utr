@@ -62,7 +62,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
             },
-            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+            ], { value: 123 })).revertedWith('UTR: INVALID_EIP');
 
             await expect(utr.exec([{
                 eip: INVALID_EIP,
@@ -83,7 +83,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
             }
-            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+            ], { value: 123 })).revertedWith('UTR: INVALID_EIP');
         });
         it("discard", async function () {
             const { utr, owner, weth, poolAddress } = await loadFixture(scenario.fixture);
@@ -114,7 +114,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
             }
-            ], { value: 123, gasLimit: opts.gasLimit})).revertedWith('UniversalTokenRouter: OUTPUT_BALANCE_OVERFLOW');
+            ], { value: 123, gasLimit: opts.gasLimit})).revertedWith('UTR: OUTPUT_BALANCE_OVERFLOW');
         })
         it("INVALID_MODE", async function () {
             const { utr, owner, weth, wethAdapter } = await loadFixture(scenario.fixture);
@@ -137,7 +137,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: []
             }
-            ], { value: 123})).revertedWith('UniversalTokenRouter: INVALID_MODE');
+            ], { value: 123})).revertedWith('UTR: INVALID_MODE');
         })
         it("action.data.length == 0", async function () {
             const { utr, owner, weth, wethAdapter } = await loadFixture(scenario.fixture);
@@ -182,6 +182,337 @@ scenarios.forEach(function (scenario) {
             }
             ], { value: 123, gasLimit: opts.gasLimit})).reverted;
         })
+        it("action = tokenERC20/ERC721.transferFrom", async function () {
+            const { utr, owner, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
+            const value = pe(123)
+            await weth.deposit({ value })
+            await weth.approve(utr.address, MaxUint256)
+
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: weth.address,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            // action.code == address(0)
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: weth.address,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            // value > 0
+            await utr.exec([], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 1000,
+                    recipient: wethAdapter.address,
+                }],
+                code: wethAdapter.address,
+                data: [],
+            }], {
+                value: 1000
+            })
+            await utr.exec([], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 1000,
+                    recipient: wethAdapter.address,
+                }],
+                code: wethAdapter.address,
+                data: '0x12345678',
+            }], {
+                value: 1000
+            })
+            await expect(utr.exec([], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 1000,
+                    recipient: wethAdapter.address,
+                }],
+                code: AddressZero,
+                data: [],
+            }], {
+                value: 1000
+            })).revertedWith('NOT_CALLABLE')
+            // action.data.length > 0
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: weth.address,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: AddressZero,
+                data: '0x123123123123',
+            }])).revertedWith('NOT_CALLABLE')
+            await utr.exec([], [{
+                inputs: [],
+                code: wethAdapter.address,
+                data: '0x123123123123',
+            }])
+            // action.code == address(0), action.data.length = 0, value = 0
+            await utr.exec([], [{
+                inputs: [],
+                code: AddressZero,
+                data: [],
+            }])
+        })
+        it("action = utr.pay", async function () {
+            const { utr, owner, weth, otherAccount } = await loadFixture(scenario.fixture);
+            const value = pe(123)
+            await weth.deposit({ value })
+            await weth.approve(utr.address, MaxUint256)
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: utr.address,
+                data: (await utr.populateTransaction.pay(
+                    encodePayment(owner.address, otherAccount.address, 20, weth.address, 0),
+                    value,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            await expect(utr.exec([], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountIn: value.sub(1),
+                    recipient: otherAccount.address,
+                }],
+                code: utr.address,
+                data: (await utr.populateTransaction.pay(
+                    encodePayment(owner.address, otherAccount.address, 20, weth.address, 0),
+                    value,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            // await utr.exec([], [{
+            //     inputs: [{
+            //         mode: PAYMENT,
+            //         eip: 20,
+            //         token: weth.address,
+            //         id: 0,
+            //         amountIn: value,
+            //         recipient: otherAccount.address,
+            //     }],
+            //     code: utr.address,
+            //     data: (await utr.populateTransaction.pay(
+            //         encodePayment(owner.address, otherAccount.address, 20, weth.address, 0),
+            //         value,
+            //     )).data,
+            // }])
+        })
+        it("action = tokenERC20/ERC721.transferFrom", async function () {
+            const { utr, owner, weth, wethAdapter, otherAccount } = await loadFixture(scenario.fixture);
+            const value = pe(123)
+            await weth.deposit({ value })
+            await weth.approve(utr.address, MaxUint256)
+
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: weth.address,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            // action.code == address(0)
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: weth.address,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            // value > 0
+            await utr.exec([], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    eip: 0,
+                    token: AddressZero,
+                    id: 0,
+                    amountIn: 1000,
+                    recipient: AddressZero,
+                }],
+                code: wethAdapter.address,
+                data: [],
+            }], {
+                value: 1000
+            })
+            // action.data.length > 0
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: weth.address,
+                data: (await weth.populateTransaction.transferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    1,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: AddressZero,
+                data: '0x123123123123',
+            }])).revertedWith('NOT_CALLABLE')
+            await utr.exec([], [{
+                inputs: [],
+                code: wethAdapter.address,
+                data: '0x123123123123',
+            }])
+            // action.code == address(0), action.data.length = 0, value = 0
+            await utr.exec([], [{
+                inputs: [],
+                code: AddressZero,
+                data: [],
+            }])
+        })
+        it("action = tokenERC1155.safeTransferFrom/safeBatchTransferFrom", async function () {
+            const { utr, owner, otherAccount, gameItems } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItems.address,
+                data: (await gameItems.populateTransaction.safeTransferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    0,
+                    1,
+                    '0x00'
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItems.address,
+                data: (await gameItems.populateTransaction.safeBatchTransferFrom(
+                    owner.address,
+                    otherAccount.address,
+                    [0],
+                    [1],
+                    '0x00'
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+        })
+        it("action = tokenERC721.safeTransferFrom", async function () {
+            const { utr, owner, otherAccount, gameItem } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItem.address,
+                data: (await gameItem.populateTransaction["safeTransferFrom(address,address,uint256)"](
+                    owner.address,
+                    otherAccount.address,
+                    0
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gameItem.address,
+                data: (await gameItem.populateTransaction["safeTransferFrom(address,address,uint256,bytes)"](
+                    owner.address,
+                    otherAccount.address,
+                    0,
+                    "0x00"
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+        })
+        it("action = tokenERC777.operatorSend/operatorBurn", async function () {
+            const { utr, owner, otherAccount, gldToken } = await loadFixture(scenario.fixture);
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gldToken.address,
+                data: (await gldToken.populateTransaction.operatorSend(
+                    owner.address,
+                    otherAccount.address,
+                    10,
+                    "0x00",
+                    "0x00"
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: gldToken.address,
+                data: (await gldToken.populateTransaction.operatorBurn(
+                    otherAccount.address,
+                    10,
+                    "0x00",
+                    "0x00"
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+        })
+        it("action = tokenERC1363.transferFromAndCall", async function () {
+            const { utr, owner, otherAccount } = await loadFixture(scenario.fixture);
+            // deploy erc1363 mock
+            const compiledERC1363Mock = require("./compiled/$ERC1363.json");
+            const ERC1363Mock = await new ethers.ContractFactory(compiledERC1363Mock.abi, compiledERC1363Mock.bytecode, owner);
+            const erc1363Mock = await ERC1363Mock.deploy("ERC 1363 Mock", "1363M");
+
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: erc1363Mock.address,
+                data: (await erc1363Mock.populateTransaction["transferFromAndCall(address,address,uint256)"](
+                    owner.address,
+                    otherAccount.address,
+                    10,
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+            await expect(utr.exec([], [{
+                inputs: [],
+                code: erc1363Mock.address,
+                data: (await erc1363Mock.populateTransaction["transferFromAndCall(address,address,uint256,bytes)"](
+                    owner.address,
+                    otherAccount.address,
+                    10,
+                    "0x00"
+                )).data,
+            }])).revertedWith('NOT_CALLABLE')
+        })
+        // it("custom selectors", async function () {
+        //     const { owner, gameItem } = await loadFixture(scenario.fixture);
+        //     const customSelector0 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("awardItem(address,string)")).substring(2, 10)
+        //     const customSelector1 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("awardItems(uint256,address,string)")).substring(2, 10)
+        //     const blockedSelectors = ('0x' + customSelector0 + customSelector1).padEnd(66, '0')
+        //     // deploy UniversalRouter
+        //     const UniversalRouter = await ethers.getContractFactory("UniversalTokenRouter");
+        //     const utr = await UniversalRouter.deploy(blockedSelectors);
+        //     await utr.deployed();
+        //     await expect(utr.exec([], [{
+        //         inputs: [],
+        //         code: gameItem.address,
+        //         data: (await gameItem.populateTransaction.awardItem(
+        //             owner.address,
+        //             "test",
+        //         )).data,
+        //     }])).revertedWith('NOT_CALLABLE')
+        //     await expect(utr.exec([], [{
+        //         inputs: [],
+        //         code: gameItem.address,
+        //         data: (await gameItem.populateTransaction.awardItems(
+        //             1,
+        //             owner.address,
+        //             "test",
+        //         )).data,
+        //     }])).revertedWith('NOT_CALLABLE')
+        // })
         it("UniswapRouter.swapExactTokensForTokens", async function () {
             const { utr, uniswapPool, busd, weth, uniswapV2Helper01, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);
@@ -336,8 +667,8 @@ scenarios.forEach(function (scenario) {
             const { utr, weth, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(100) });
-            const balanceBefore = await owner.getBalance()
-            await utr.exec([], [{
+            // const balanceBefore = await owner.getBalance()
+            await expect(utr.exec([], [{
                 inputs: [{
                     mode: TRANSFER,
                     eip: 20,                 
@@ -348,12 +679,12 @@ scenarios.forEach(function (scenario) {
                 }],
                 code: weth.address,
                 data: (await weth.populateTransaction.withdraw(pe(1))).data,    // WETH.deposit returns WETH token to the UTR contract
-            }]);
-            const balanceAfter = await owner.getBalance()
-            expect(fe(balanceAfter.sub(balanceBefore))).to.closeTo(1, 1e-4)
+            }])).revertedWith('NOT_CALLABLE');
+            // const balanceAfter = await owner.getBalance()
+            // expect(fe(balanceAfter.sub(balanceBefore))).to.closeTo(1, 1e-4)
         });
         it("Output Token Verification - EIP-721", async function () {
-            const { utr, gameItem, owner } = await loadFixture(scenario.fixture);
+            const { utr, gameItem, gameController, owner } = await loadFixture(scenario.fixture);
             await gameItem.setApprovalForAll(utr.address, true);
             const tokenURI = "https://game.example/item.json";
             const player = owner.address;
@@ -366,8 +697,8 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
             expect(await gameItem.ownerOf(0)).to.equal(player);
             await utr.exec([{
@@ -378,8 +709,8 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
             expect(await gameItem.ownerOf(1)).to.equal(player);
             await expect(utr.exec([{
@@ -390,9 +721,9 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
-            }])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItem(player, tokenURI)).data,
+            }])).to.revertedWith("UTR: INSUFFICIENT_OUTPUT_AMOUNT");
             await utr.exec([{
                 eip: 721,
                 token: gameItem.address,
@@ -401,8 +732,8 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItems(amount, player, tokenURI)).data,
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItems(amount, player, tokenURI)).data,
             }]);
         });
     });

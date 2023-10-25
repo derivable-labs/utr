@@ -17,9 +17,17 @@ import './IWETH9.sol';
 import './TransferHelper.sol';
 import './ISwapRouter.sol';
 
+abstract contract NotToken {
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public pure virtual returns (bool) {
+        return interfaceId == 0x61206120 || interfaceId == 0x01ffc9a7;
+    }
+}
+
 /// @title Uniswap V3 Swap Router
 /// @notice Router for stateless execution of swaps against Uniswap V3
 contract SwapHelper is
+    NotToken,
     ISwapRouter,
     PeripheryImmutableState,
     PeripheryValidation,

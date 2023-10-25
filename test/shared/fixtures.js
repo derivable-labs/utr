@@ -1,5 +1,7 @@
 const { ethers } = require("hardhat");
 const { bn, numberToWei } = require("./utilities");
+const { ensureERC1820 } = require("./hardhat-erc1820");
+
 const opts = {
     gasLimit: 30000000
 }
@@ -75,10 +77,21 @@ async function scenario01() {
     const gameItem = await GameItem.deploy();
     await gameItem.deployed();
 
+    // deploy nft721
+    const GameController = await ethers.getContractFactory("GameController");
+    const gameController = await GameController.deploy(gameItem.address);
+    await gameController.deployed();
+    
     // deploy nft1155
     const GameItems = await ethers.getContractFactory("GameItems");
     const gameItems = await GameItems.deploy();
     await gameItems.deployed();
+
+    // deploy erc777
+    await ensureERC1820(hre.network.provider)
+    const GLDToken = await ethers.getContractFactory("GLDToken");
+    const gldToken = await GLDToken.deploy(1000, [owner.address]);
+    await gldToken.deployed();
 
     // deploy AllowanceAdapter
     const AllowanceAdapter = await ethers.getContractFactory("AllowanceAdapter");
@@ -160,8 +173,10 @@ async function scenario01() {
         uniswapPool,
         uniswapV2Helper01,
         wethAdapter,
+        gameController,
         gameItem,
         gameItems,
+        gldToken,
         busd,
         weth,
         owner,
