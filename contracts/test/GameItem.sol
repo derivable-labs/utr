@@ -46,10 +46,4 @@ contract GameItem is ERC721URIStorage {
         _tokenIds.increment();
         return newItemId;
     }
-
-    // IERC165-supportsInterface
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == 0x61206120 ||
-            super.supportsInterface(interfaceId);
-    }
 }

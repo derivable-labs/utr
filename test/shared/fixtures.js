@@ -75,6 +75,11 @@ async function scenario01() {
     const gameItem = await GameItem.deploy();
     await gameItem.deployed();
 
+    // deploy nft721
+    const GameController = await ethers.getContractFactory("GameController");
+    const gameController = await GameController.deploy(gameItem.address);
+    await gameController.deployed();
+
     // deploy nft1155
     const GameItems = await ethers.getContractFactory("GameItems");
     const gameItems = await GameItems.deploy();
@@ -160,6 +165,7 @@ async function scenario01() {
         uniswapPool,
         uniswapV2Helper01,
         wethAdapter,
+        gameController,
         gameItem,
         gameItems,
         busd,

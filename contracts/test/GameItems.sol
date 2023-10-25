@@ -28,10 +28,4 @@ contract GameItems is ERC1155 {
         _burn(player, idIn, amount);
         _mint(player, idOut, amount, "");
     }
-
-    // IERC165-supportsInterface
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == 0x61206120 ||
-            super.supportsInterface(interfaceId);
-    }
 }

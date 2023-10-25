@@ -353,7 +353,7 @@ scenarios.forEach(function (scenario) {
             // expect(fe(balanceAfter.sub(balanceBefore))).to.closeTo(1, 1e-4)
         });
         it("Output Token Verification - EIP-721", async function () {
-            const { utr, gameItem, owner } = await loadFixture(scenario.fixture);
+            const { utr, gameItem, gameController, owner } = await loadFixture(scenario.fixture);
             await gameItem.setApprovalForAll(utr.address, true);
             const tokenURI = "https://game.example/item.json";
             const player = owner.address;
@@ -366,8 +366,8 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
             expect(await gameItem.ownerOf(0)).to.equal(player);
             await utr.exec([{
@@ -378,8 +378,8 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItem(player, tokenURI)).data,
             }]);
             expect(await gameItem.ownerOf(1)).to.equal(player);
             await expect(utr.exec([{
@@ -390,8 +390,8 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItem(player, tokenURI)).data,
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItem(player, tokenURI)).data,
             }])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
             await utr.exec([{
                 eip: 721,
@@ -401,8 +401,8 @@ scenarios.forEach(function (scenario) {
                 recipient: player,
             }], [{
                 inputs: [],
-                code: gameItem.address,
-                data: (await gameItem.populateTransaction.awardItems(amount, player, tokenURI)).data,
+                code: gameController.address,
+                data: (await gameController.populateTransaction.awardItems(amount, player, tokenURI)).data,
             }]);
         });
     });
