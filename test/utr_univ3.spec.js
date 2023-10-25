@@ -155,7 +155,7 @@ scenarios.forEach(function (scenario) {
             }], {
                 value: '2000'
             })
-            await expect(request).to.be.revertedWith('UniversalTokenRouter: INSUFFICIENT_PAYMENT')
+            await expect(request).to.be.revertedWith('UTR: INSUFFICIENT_PAYMENT')
         });
 
         it("insufficient output", async function () {
@@ -181,7 +181,7 @@ scenarios.forEach(function (scenario) {
             }], {
                 value: '2000'
             })
-            await expect(request).to.be.revertedWith('UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT')
+            await expect(request).to.be.revertedWith('UTR: INSUFFICIENT_OUTPUT_AMOUNT')
         })
 
 

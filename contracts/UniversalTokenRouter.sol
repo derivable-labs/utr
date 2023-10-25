@@ -39,7 +39,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             Output memory output = outputs[i];
             uint256 balance = _balanceOf(output);
             uint256 expected = output.amountOutMin + balance;
-            require(expected >= balance, 'UniversalTokenRouter: OUTPUT_BALANCE_OVERFLOW');
+            require(expected >= balance, 'UTR: OUTPUT_BALANCE_OVERFLOW');
             output.amountOutMin = expected;
         }
 
@@ -61,14 +61,14 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                     } else if (mode == TRANSFER) {
                         _transferToken(sender, input.recipient, input.eip, input.token, input.id, input.amountIn);
                     } else {
-                        revert('UniversalTokenRouter: INVALID_MODE');
+                        revert('UTR: INVALID_MODE');
                     }
                 }
             }
             if (action.code != address(0) || action.data.length > 0 || value > 0) {
                 require(
                     ERC165Checker.supportsInterface(action.code, 0x61206120),
-                    "UniversalTokenRouter: NOT_CALLABLE"
+                    "UTR: NOT_CALLABLE"
                 );
                 (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                 if (!success) {
@@ -101,7 +101,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
             Output memory output = outputs[i];
             uint256 balance = _balanceOf(output);
             // NOTE: output.amountOutMin is reused as `expected`
-            require(balance >= output.amountOutMin, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+            require(balance >= output.amountOutMin, 'UTR: INSUFFICIENT_OUTPUT_AMOUNT');
         }
     } }
     
@@ -126,7 +126,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     /// @param amount token amount to pay with payment
     function discard(bytes memory payment, uint256 amount) public virtual override {
         bytes32 key = keccak256(payment);
-        require(t_payments[key] >= amount, 'UniversalTokenRouter: INSUFFICIENT_PAYMENT');
+        require(t_payments[key] >= amount, 'UTR: INSUFFICIENT_PAYMENT');
         unchecked {
             t_payments[key] -= amount;
         }
@@ -154,7 +154,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         } else if (eip == 721) {
             IERC721(token).safeTransferFrom(sender, recipient, id);
         } else {
-            revert("UniversalTokenRouter: INVALID_EIP");
+            revert("UTR: INVALID_EIP");
         }
     }
 
@@ -181,6 +181,6 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         if (eip == EIP_ETH) {
             return output.recipient.balance;
         }
-        revert("UniversalTokenRouter: INVALID_EIP");
+        revert("UTR: INVALID_EIP");
     }
 }

@@ -62,7 +62,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
             },
-            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+            ], { value: 123 })).revertedWith('UTR: INVALID_EIP');
 
             await expect(utr.exec([{
                 eip: INVALID_EIP,
@@ -83,7 +83,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
             }
-            ], { value: 123 })).revertedWith('UniversalTokenRouter: INVALID_EIP');
+            ], { value: 123 })).revertedWith('UTR: INVALID_EIP');
         });
         it("discard", async function () {
             const { utr, owner, weth, poolAddress } = await loadFixture(scenario.fixture);
@@ -114,7 +114,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: (await wethAdapter.populateTransaction.deposit(owner.address)).data,
             }
-            ], { value: 123, gasLimit: opts.gasLimit})).revertedWith('UniversalTokenRouter: OUTPUT_BALANCE_OVERFLOW');
+            ], { value: 123, gasLimit: opts.gasLimit})).revertedWith('UTR: OUTPUT_BALANCE_OVERFLOW');
         })
         it("INVALID_MODE", async function () {
             const { utr, owner, weth, wethAdapter } = await loadFixture(scenario.fixture);
@@ -137,7 +137,7 @@ scenarios.forEach(function (scenario) {
                 code: wethAdapter.address,
                 data: []
             }
-            ], { value: 123})).revertedWith('UniversalTokenRouter: INVALID_MODE');
+            ], { value: 123})).revertedWith('UTR: INVALID_MODE');
         })
         it("action.data.length == 0", async function () {
             const { utr, owner, weth, wethAdapter } = await loadFixture(scenario.fixture);
@@ -723,7 +723,7 @@ scenarios.forEach(function (scenario) {
                 inputs: [],
                 code: gameController.address,
                 data: (await gameController.populateTransaction.awardItem(player, tokenURI)).data,
-            }])).to.revertedWith("UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+            }])).to.revertedWith("UTR: INSUFFICIENT_OUTPUT_AMOUNT");
             await utr.exec([{
                 eip: 721,
                 token: gameItem.address,
