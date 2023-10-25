@@ -13,6 +13,16 @@ contract WethAdapter is NotToken {
         WETH = _weth;
     }
 
+    fallback() external payable {
+        IWETH(WETH).deposit{value: msg.value}();
+        TransferHelper.safeTransfer(WETH, msg.sender, msg.value);
+    }
+
+    receive() external payable {
+        IWETH(WETH).deposit{value: msg.value}();
+        TransferHelper.safeTransfer(WETH, msg.sender, msg.value);
+    }
+
     function deposit(address recipient) external payable {
         IWETH(WETH).deposit{value: msg.value}();
         TransferHelper.safeTransfer(WETH, recipient, msg.value);

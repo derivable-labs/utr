@@ -65,7 +65,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                     }
                 }
             }
-            if (action.data.length > 0) {
+            if (action.code != address(0) || action.data.length > 0 || value > 0) {
                 require(
                     ERC165Checker.supportsInterface(action.code, 0x61206120),
                     "UniversalTokenRouter: NOT_CALLABLE"
@@ -77,7 +77,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                     }
                 }
             }
-            // clear all transient storages, allowances and left-overs
+            // clear all transient storages
             for (uint256 j = 0; j < action.inputs.length; ++j) {
                 Input memory input = action.inputs[j];
                 if (input.mode == PAYMENT) {
