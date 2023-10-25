@@ -26,7 +26,7 @@ struct Action {
   bytes data; // contract input data
 }
 
-interface IUniversalTokenRouter is IERC165 {
+interface IUniversalTokenRouter {
   function exec(
     Output[] memory outputs,
     Action[] memory actions

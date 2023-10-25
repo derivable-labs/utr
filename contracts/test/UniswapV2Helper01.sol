@@ -9,8 +9,14 @@ interface IUniversalTokenRouter {
     function pay(bytes calldata payment, uint256 amount) external;
 }
 
+abstract contract NotToken {
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public pure virtual returns (bool) {
+        return interfaceId == 0x61206120 || interfaceId == 0x01ffc9a7;
+    }
+}
 
-contract UniswapV2Helper01 {
+contract UniswapV2Helper01 is NotToken {
     address public immutable factory;
     address public immutable WETH;
     address public immutable UTR;

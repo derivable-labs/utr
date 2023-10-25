@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IUniversalTokenRouter.sol";
 
@@ -65,6 +66,10 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
                 }
             }
             if (action.data.length > 0) {
+                require(
+                    ERC165Checker.supportsInterface(action.code, 0x61206120),
+                    "UniversalTokenRouter: NOT_CALLABLE"
+                );
                 (bool success, bytes memory result) = action.code.call{value: value}(action.data);
                 if (!success) {
                     assembly {
@@ -128,7 +133,7 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     }
 
     // IERC165-supportsInterface
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return
             interfaceId == type(IUniversalTokenRouter).interfaceId ||
             super.supportsInterface(interfaceId);

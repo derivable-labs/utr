@@ -336,8 +336,8 @@ scenarios.forEach(function (scenario) {
             const { utr, weth, owner } = await loadFixture(scenario.fixture);
             await weth.approve(utr.address, MaxUint256);
             await weth.deposit({ value: pe(100) });
-            const balanceBefore = await owner.getBalance()
-            await utr.exec([], [{
+            // const balanceBefore = await owner.getBalance()
+            await expect(utr.exec([], [{
                 inputs: [{
                     mode: TRANSFER,
                     eip: 20,                 
@@ -348,9 +348,9 @@ scenarios.forEach(function (scenario) {
                 }],
                 code: weth.address,
                 data: (await weth.populateTransaction.withdraw(pe(1))).data,    // WETH.deposit returns WETH token to the UTR contract
-            }]);
-            const balanceAfter = await owner.getBalance()
-            expect(fe(balanceAfter.sub(balanceBefore))).to.closeTo(1, 1e-4)
+            }])).revertedWith('NOT_CALLABLE');
+            // const balanceAfter = await owner.getBalance()
+            // expect(fe(balanceAfter.sub(balanceBefore))).to.closeTo(1, 1e-4)
         });
         it("Output Token Verification - EIP-721", async function () {
             const { utr, gameItem, owner } = await loadFixture(scenario.fixture);
