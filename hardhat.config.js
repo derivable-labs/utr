@@ -135,6 +135,7 @@ module.exports = {
     etherscan: {
         apiKey: {
             ethereum: process.env.ETHERSCAN_API_KEY,
+            arbitrumOne: process.env.ARBISCAN_API_KEY,
             bsc: process.env.BSCSCAN_API_KEY,
         }
     },

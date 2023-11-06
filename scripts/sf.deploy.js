@@ -9,7 +9,8 @@ async function main() {
     const salt = 0
     const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
     const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json');
-    const { url, accounts, gasPrice } = hre.network.config
+    const { url, accounts } = hre.network.config
+    const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
     // Connect to the network
     const provider = new ethers.providers.JsonRpcProvider(url);
     const singletonFactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
