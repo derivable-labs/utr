@@ -96,7 +96,8 @@ module.exports = {
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
             ],
             timeout: 900000,
-            chainId: 42161
+            chainId: 42161,
+            gasLimit: 12000000
         },
         arbitrumtest: {
             url: process.env.ARB_TESTNET_PROVIDER ?? 'https://endpoints.omniatech.io/v1/arbitrum/goerli/public',
@@ -113,6 +114,7 @@ module.exports = {
             ],
             timeout: 900000,
             chainId: 56,
+            gasLimit: 12000000,
             gasPrice: 3e9
         },
         basetestnet: {
