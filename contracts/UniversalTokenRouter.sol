@@ -26,12 +26,15 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
     function exec(
         Output[] memory outputs,
         Action[] memory actions
-    ) external payable virtual override {
+    ) external payable virtual override returns (uint[] memory amountOuts, uint gasLeft) {
+    uint[] memory amountOuts = new uint[](outputs.length);
+    uint[] memory oldBalances= new uint[](outputs.length);
     unchecked {
         // track the expected balances before any action is executed
         for (uint256 i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
             uint256 balance = _balanceOf(output);
+            oldBalances[i] = balance;
             uint256 expected = output.amountOutMin + balance;
             require(expected >= balance, 'UniversalTokenRouter: OUTPUT_BALANCE_OVERFLOW');
             output.amountOutMin = expected;
@@ -90,11 +93,14 @@ contract UniversalTokenRouter is ERC165, IUniversalTokenRouter {
         for (uint256 i = 0; i < outputs.length; ++i) {
             Output memory output = outputs[i];
             uint256 balance = _balanceOf(output);
+            amountOuts[i] = balance - oldBalances[i];
             // NOTE: output.amountOutMin is reused as `expected`
             require(balance >= output.amountOutMin, 'UniversalTokenRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         }
+        gasLeft = gasleft();
+        return (amountOuts, gasLeft);
     } }
-    
+
     function pay(bytes memory payment, uint256 amount) external virtual override {
         discard(payment, amount);
         (
