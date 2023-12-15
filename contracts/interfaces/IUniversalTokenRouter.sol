@@ -30,7 +30,7 @@ interface IUniversalTokenRouter {
   function exec(
     Output[] memory outputs,
     Action[] memory actions
-  ) external payable;
+  ) external payable returns (uint[] memory amountOuts, uint gasLeft);
 
   function pay(bytes memory payment, uint256 amount) external;
   function discard(bytes memory payment, uint256 amount) external;
