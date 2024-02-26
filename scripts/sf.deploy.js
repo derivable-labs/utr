@@ -16,6 +16,11 @@ async function main() {
     const wallet = new ethers.Wallet(accounts[0], provider);
     const contractWithSigner = contract.connect(wallet);
 
+    console.log('Deployer:', wallet.address)
+    // console.log('Balance:', ethers.utils.formatEther((await wallet.getBalance()).toString()))
+
+    // Note: it's simply cannot estimate the gas using SF
+
     try {
         const deployTx = await contractWithSigner.deploy(
             initCodeUTR,
